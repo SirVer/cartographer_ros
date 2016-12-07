@@ -140,6 +140,7 @@ google_test(configuration_files_test
   SRCS
     configuration_files_test.cc
   DEPENDS
+    map_writer
     node_options
 )
 

@@ -44,6 +44,7 @@ include(FindPkgConfig)
 PKG_SEARCH_MODULE(YAMLCPP REQUIRED yaml-cpp>=0.5.1)
 
 find_package(PCL REQUIRED COMPONENTS common io)
+list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system iostreams)
 
