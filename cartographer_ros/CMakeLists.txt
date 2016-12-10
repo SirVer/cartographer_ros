@@ -79,7 +79,7 @@ install(DIRECTORY launch urdf configuration_files
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-install(PROGRAMS scripts/tf_remove_frames.py
+install(PROGRAMS scripts/tf_remove_frames.py scripts/imu_remove_splash.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
