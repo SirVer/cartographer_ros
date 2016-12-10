@@ -21,8 +21,8 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher"
     type="robot_state_publisher" />
     
-  <node name="imu_msg_converter" pkg="imu_msg_converter"
-    type="imu_remove_spalash.py" />
+  <node name="imu_remove_splash" pkg="cartographer_ros"
+    type="imu_remove_splash.py" />
 
   <node name="cartographer_node" pkg="cartographer_ros" 
       type="cartographer_node" args="
@@ -31,6 +31,7 @@
       output="screen">
     <remap from="points2" to="velodyne_points" />
     <remap from="imu" to="imu_no_splash" />
+    <remap from="odom" to="laser_odom" />
     <!--remap from="points2_2" to="vertical_laser_3d" /-->
   </node>
 </launch>
