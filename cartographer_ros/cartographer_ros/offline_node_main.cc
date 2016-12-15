@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -21,13 +22,16 @@
 #include "cartographer/common/lua_parameter_dictionary.h"
 #include "cartographer/common/make_unique.h"
 #include "cartographer/common/port.h"
+#include "cartographer_ros/bag_reader.h"
 #include "cartographer_ros/node.h"
 #include "cartographer_ros/ros_log_sink.h"
 #include "cartographer_ros/urdf_reader.h"
+#include "gflags/gflags.h"
 #include "ros/callback_queue.h"
 #include "rosbag/bag.h"
 #include "rosbag/view.h"
 #include "rosgraph_msgs/Clock.h"
+#include "tf2_msgs/TFMessage.h"
 #include "urdf/model.h"
 
 DEFINE_string(configuration_directory, "",
@@ -37,8 +41,7 @@ DEFINE_string(configuration_directory, "",
 DEFINE_string(configuration_basename, "",
               "Basename, i.e. not containing any directory prefix, of the "
               "configuration file.");
-// TODO(damonkohler): Support multi-trajectory.
-DEFINE_string(bag_filename, "", "Bag to process.");
+DEFINE_string(bag_filenames, "", "Comma-separated list of bags to process.");
 DEFINE_string(
     urdf_filename, "",
     "URDF file that contains static links for your sensor configuration.");
@@ -49,8 +52,17 @@ namespace {
 constexpr int kLatestOnlyPublisherQueueSize = 1;
 constexpr char kClockTopic[] = "clock";
 
-void Run() {
-  // TODO(damonkohler): Pull out this common code across binaries.
+std::vector<string> SplitString(const string& input, const char delimiter) {
+  std::stringstream stream(input);
+  string token;
+  std::vector<string> tokens;
+  while (std::getline(stream, token, delimiter)) {
+    tokens.push_back(token);
+  }
+  return tokens;
+}
+
+void Run(std::vector<string> bag_filenames) {
   auto file_resolver = cartographer::common::make_unique<
       cartographer::common::ConfigurationFileResolver>(
       std::vector<string>{FLAGS_configuration_directory});
@@ -59,23 +71,37 @@ void Run() {
   cartographer::common::LuaParameterDictionary lua_parameter_dictionary(
       code, std::move(file_resolver));
 
-  tf2_ros::Buffer tf_buffer;
-  tf_buffer.setUsingDedicatedThread(true);
-  ReadStaticTransformsFromUrdf(FLAGS_urdf_filename, &tf_buffer);
-  const auto options = CreateNodeOptions(&lua_parameter_dictionary);
-  Node node(options, &tf_buffer);
+  auto tf_buffer = ::cartographer::common::make_unique<tf2_ros::Buffer>();
+  if (!FLAGS_urdf_filename.empty()) {
+    ReadStaticTransformsFromUrdf(FLAGS_urdf_filename, tf_buffer.get());
+  } else {
+    LOG(INFO) << "Pre-loading transforms from bag...";
+    // TODO(damonkohler): Support multi-trajectory.
+    CHECK_EQ(bag_filenames.size(), 1);
+    tf_buffer = ReadTransformsFromBag(bag_filenames.back());
+  }
+  tf_buffer->setUsingDedicatedThread(true);
+
+  auto options = CreateNodeOptions(&lua_parameter_dictionary);
+  // Since we preload the transform buffer, we should never have to wait for a
+  // transform. When we finish processing the bag, we will simply drop any
+  // remaining sensor data that cannot be transformed due to missing transforms.
+  options.lookup_transform_timeout_sec = 0.;
+  Node node(options, tf_buffer.get());
   node.Initialize();
 
   std::unordered_set<string> expected_sensor_ids;
+  const auto check_insert = [&expected_sensor_ids, &node](const string& topic) {
+    CHECK(expected_sensor_ids.insert(node.node_handle()->resolveName(topic))
+              .second);
+  };
 
   // For 2D SLAM, subscribe to exactly one horizontal laser.
   if (options.use_laser_scan) {
-    expected_sensor_ids.insert(
-        node.node_handle()->resolveName(kLaserScanTopic, false /* remap */));
+    check_insert(kLaserScanTopic);
   }
   if (options.use_multi_echo_laser_scan) {
-    expected_sensor_ids.insert(node.node_handle()->resolveName(
-        kMultiEchoLaserScanTopic, false /* remap */));
+    check_insert(kMultiEchoLaserScanTopic);
   }
 
   // For 3D SLAM, subscribe to all point clouds topics.
@@ -85,8 +111,7 @@ void Run() {
       if (options.num_point_clouds > 1) {
         topic += "_" + std::to_string(i + 1);
       }
-      expected_sensor_ids.insert(
-          node.node_handle()->resolveName(topic, false /* remap */));
+      check_insert(topic);
     }
   }
 
@@ -96,71 +121,89 @@ void Run() {
       (options.map_builder_options.use_trajectory_builder_2d() &&
        options.map_builder_options.trajectory_builder_2d_options()
            .use_imu_data())) {
-    expected_sensor_ids.insert(
-        node.node_handle()->resolveName(kImuTopic, false /* remap */));
+    check_insert(kImuTopic);
   }
 
   // For both 2D and 3D SLAM, odometry is optional.
   if (options.use_odometry) {
-    expected_sensor_ids.insert(
-        node.node_handle()->resolveName(kOdometryTopic, false /* remap */));
+    check_insert(kOdometryTopic);
   }
-
-  // TODO(damonkohler): Support multi-trajectory.
-  const int trajectory_id = node.map_builder_bridge()->AddTrajectory(
-      expected_sensor_ids, options.tracking_frame);
 
   ::ros::Publisher clock_publisher =
       node.node_handle()->advertise<rosgraph_msgs::Clock>(
           kClockTopic, kLatestOnlyPublisherQueueSize);
 
-  rosbag::Bag bag;
-  bag.open(FLAGS_bag_filename, rosbag::bagmode::Read);
-  for (const rosbag::MessageInstance& msg : rosbag::View(bag)) {
+  for (const string& bag_filename : bag_filenames) {
     if (!::ros::ok()) {
-      break;
+      return;
     }
 
-    const string& topic = node.node_handle()->resolveName(msg.getTopic());
-    if (expected_sensor_ids.count(
-            node.node_handle()->resolveName(msg.getTopic())) == 0) {
-      continue;
-    }
-    if (msg.isType<sensor_msgs::LaserScan>()) {
-      node.map_builder_bridge()
-          ->sensor_bridge(trajectory_id)
-          ->HandleLaserScanMessage(topic,
-                                   msg.instantiate<sensor_msgs::LaserScan>());
-    } else if (msg.isType<sensor_msgs::MultiEchoLaserScan>()) {
-      node.map_builder_bridge()
-          ->sensor_bridge(trajectory_id)
-          ->HandleMultiEchoLaserScanMessage(
-              topic, msg.instantiate<sensor_msgs::MultiEchoLaserScan>());
-    } else if (msg.isType<sensor_msgs::PointCloud2>()) {
-      node.map_builder_bridge()
-          ->sensor_bridge(trajectory_id)
-          ->HandlePointCloud2Message(
-              topic, msg.instantiate<sensor_msgs::PointCloud2>());
-    } else if (msg.isType<sensor_msgs::Imu>()) {
-      node.map_builder_bridge()
-          ->sensor_bridge(trajectory_id)
-          ->HandleImuMessage(topic, msg.instantiate<sensor_msgs::Imu>());
-    } else if (msg.isType<nav_msgs::Odometry>()) {
-      node.map_builder_bridge()
-          ->sensor_bridge(trajectory_id)
-          ->HandleOdometryMessage(topic, msg.instantiate<nav_msgs::Odometry>());
+    const int trajectory_id = node.map_builder_bridge()->AddTrajectory(
+        expected_sensor_ids, options.tracking_frame);
+
+    rosbag::Bag bag;
+    bag.open(bag_filename, rosbag::bagmode::Read);
+    rosbag::View view(bag);
+    const ::ros::Time begin_time = view.getBeginTime();
+    const double duration_in_seconds = (view.getEndTime() - begin_time).toSec();
+
+    for (const rosbag::MessageInstance& msg : view) {
+      if (!::ros::ok()) {
+        return;
+      }
+
+      // TODO(damonkohler): Republish non-conflicting tf messages.
+      const string topic =
+          node.node_handle()->resolveName(msg.getTopic(), false /* resolve */);
+      if (expected_sensor_ids.count(topic) == 0) {
+        continue;
+      }
+      if (msg.isType<sensor_msgs::LaserScan>()) {
+        node.map_builder_bridge()
+            ->sensor_bridge(trajectory_id)
+            ->HandleLaserScanMessage(topic,
+                                     msg.instantiate<sensor_msgs::LaserScan>());
+      }
+      if (msg.isType<sensor_msgs::MultiEchoLaserScan>()) {
+        node.map_builder_bridge()
+            ->sensor_bridge(trajectory_id)
+            ->HandleMultiEchoLaserScanMessage(
+                topic, msg.instantiate<sensor_msgs::MultiEchoLaserScan>());
+      }
+      if (msg.isType<sensor_msgs::PointCloud2>()) {
+        node.map_builder_bridge()
+            ->sensor_bridge(trajectory_id)
+            ->HandlePointCloud2Message(
+                topic, msg.instantiate<sensor_msgs::PointCloud2>());
+      }
+      if (msg.isType<sensor_msgs::Imu>()) {
+        node.map_builder_bridge()
+            ->sensor_bridge(trajectory_id)
+            ->HandleImuMessage(topic, msg.instantiate<sensor_msgs::Imu>());
+      }
+      if (msg.isType<nav_msgs::Odometry>()) {
+        node.map_builder_bridge()
+            ->sensor_bridge(trajectory_id)
+            ->HandleOdometryMessage(topic,
+                                    msg.instantiate<nav_msgs::Odometry>());
+      }
+
+      rosgraph_msgs::Clock clock;
+      clock.clock = msg.getTime();
+      clock_publisher.publish(clock);
+
+      ::ros::spinOnce();
+
+      LOG_EVERY_N(INFO, 100000)
+          << "Processed " << (msg.getTime() - begin_time).toSec() << " of "
+          << duration_in_seconds << " bag time seconds...";
     }
 
-    rosgraph_msgs::Clock clock;
-    clock.clock = msg.getTime();
-    clock_publisher.publish(clock);
-
-    ::ros::spinOnce();
+    bag.close();
+    node.map_builder_bridge()->FinishTrajectory(trajectory_id);
   }
-  bag.close();
 
-  node.map_builder_bridge()->FinishTrajectory(trajectory_id);
-  node.map_builder_bridge()->WriteAssets(FLAGS_bag_filename);
+  node.map_builder_bridge()->WriteAssets(bag_filenames.front());
 }
 
 }  // namespace
@@ -174,14 +217,14 @@ int main(int argc, char** argv) {
       << "-configuration_directory is missing.";
   CHECK(!FLAGS_configuration_basename.empty())
       << "-configuration_basename is missing.";
-  CHECK(!FLAGS_bag_filename.empty()) << "-bag_filename is missing.";
-  CHECK(!FLAGS_urdf_filename.empty()) << "-urdf_filename is missing.";
+  CHECK(!FLAGS_bag_filenames.empty()) << "-bag_filenames is missing.";
 
   ::ros::init(argc, argv, "cartographer_offline_node");
   ::ros::start();
 
   cartographer_ros::ScopedRosLogSink ros_log_sink;
-  cartographer_ros::Run();
+  cartographer_ros::Run(
+      cartographer_ros::SplitString(FLAGS_bag_filenames, ','));
 
   ::ros::shutdown();
 }

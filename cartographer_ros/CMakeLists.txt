@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.3)
 
 project(cartographer_ros)
 
@@ -20,18 +20,19 @@ set(PACKAGE_DEPENDENCIES
   cartographer_ros_msgs
   eigen_conversions
   geometry_msgs
+  message_runtime
   nav_msgs
   pcl_conversions
   rosbag
   roscpp
   roslib
   sensor_msgs
+  std_msgs
   tf2
   tf2_eigen
   tf2_ros
   urdf
 )
-
 
 find_package(cartographer REQUIRED)
 include("${CARTOGRAPHER_CMAKE_DIR}/functions.cmake")
@@ -41,7 +42,7 @@ google_enable_testing()
 find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES})
 
 include(FindPkgConfig)
-PKG_SEARCH_MODULE(YAMLCPP REQUIRED yaml-cpp>=0.5.1)
+pkg_search_module(YAMLCPP REQUIRED yaml-cpp>=0.5.1)
 
 find_package(PCL REQUIRED COMPONENTS common io)
 list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
@@ -55,14 +56,19 @@ if(DEFINED urdfdom_headers_VERSION)
   endif()
 endif()
 
+include_directories(
+  ${urdfdom_headers_INCLUDE_DIRS}
+)
+
 catkin_package(
   CATKIN_DEPENDS
-    message_runtime
     ${PACKAGE_DEPENDENCIES}
   DEPENDS
+    YAMLCPP
     PCL
-    Eigen3
+    EIGEN3
     Boost
+    urdfdom_headers
   INCLUDE_DIRS "."
   LIBRARIES ${PROJECT_NAME}
 )
@@ -84,7 +90,7 @@ install(PROGRAMS scripts/tf_remove_frames.py scripts/imu_remove_splash.py
 )
 
 install(TARGETS ${PROJECT_NAME}
-        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
 )

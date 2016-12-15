@@ -14,16 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Cache intermediate Docker layers. For a description of how this works, see:
-# https://giorgos.sealabs.net/docker-cache-on-travis-and-docker-112.html
-
 set -o errexit
 set -o verbose
-set -o pipefail
 
-if [[ ${TRAVIS_BRANCH} == "master" ]] &&
-    [[ ${TRAVIS_PULL_REQUEST} == "false" ]]; then
-  mkdir -p $(dirname ${DOCKER_CACHE_FILE});
-  docker save $(docker history -q cartographer_ros:${ROS_RELEASE} |
-      grep -v '<missing>') | gzip > ${DOCKER_CACHE_FILE};
-fi
+. /opt/ros/${ROS_DISTRO}/setup.sh
+
+cd catkin_ws
+catkin_test_results $@
