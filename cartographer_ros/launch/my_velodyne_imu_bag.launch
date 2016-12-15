@@ -20,11 +20,11 @@
 
   <node name="robot_state_publisher" pkg="robot_state_publisher"
     type="robot_state_publisher" />
-    
+
   <node name="imu_remove_splash" pkg="cartographer_ros"
     type="imu_remove_splash.py" />
 
-  <node name="cartographer_node" pkg="cartographer_ros" 
+  <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
           -configuration_directory $(find cartographer_ros)/configuration_files
           -configuration_basename my_velodyne_imu_bag.lua"

@@ -90,10 +90,10 @@ options = {
       -- action = "write_octree",
       -- directory = "octree",
     -- },
-    -- {
-      -- action = "write_ply",
-      -- filename = "points.ply",
-    -- },
+    {
+      action = "write_ply",
+      filename = "points.ply",
+    },
   }
 }
 

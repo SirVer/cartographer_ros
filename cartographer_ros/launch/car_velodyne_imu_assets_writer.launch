@@ -15,15 +15,15 @@
 -->
 
 <launch>
-  <param name="/use_sim_time" value="true" />
-  
-  <node pkg="tf" type="static_transform_publisher" name="bbb_broadcaster" args="0 0 0 0 0 0 base_link iMiev/velodyne  100" >
+  <node name="cartographer_assets_writer" pkg="cartographer_ros"
+      type="cartographer_assets_writer" args="
+          -configuration_directory $(find cartographer_ros)/configuration_files
+          -configuration_basename assets_writer.lua
+          -urdf_filename $(find cartographer_ros)/urdf/car_velodyne_imu.urdf
+          -bag_filename $(arg bag_filename)
+          -trajectory_filename $(arg trajectory_filename)
+          "
+          output="screen">
+    <!--remap from="points2_2" to="vertical_laser_3d" /-->
   </node>
-
-  <include file="$(find cartographer_ros)/launch/car_velodyne_imu_cartographer.launch" />
-
-  <node name="rviz" pkg="rviz" type="rviz" required="true"
-      args="-d $(find cartographer_ros)/configuration_files/mybag.rviz" />
-  <node name="playbag" pkg="rosbag" type="play"
-      args="-r 2. --clock $(arg bag_filename) " />
 </launch>
