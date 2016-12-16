@@ -15,6 +15,14 @@
 -->
 
 <launch>
+  <param name="/use_sim_time" value="true" />
+
+  <param name="robot_description"
+    textfile="$(find cartographer_ros)/urdf/test_2d.urdf" />
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher"
+    type="robot_state_publisher" />
+
   <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
           -configuration_directory $(find cartographer_ros)/configuration_files
@@ -23,8 +31,9 @@
     <remap from="scan" to="/scan" />
   </node>
 
-
   <node name="rviz" pkg="rviz" type="rviz" required="true"
       args="-d $(find cartographer_ros)/configuration_files/test_2d.rviz" />
 
+  <node name="playbag" pkg="rosbag" type="play"
+      args="-r 4 --clock $(arg bag_filename)" />
 </launch>
