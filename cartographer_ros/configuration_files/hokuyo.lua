@@ -17,8 +17,10 @@ include "map_builder.lua"
 options = {
   map_builder = MAP_BUILDER,
   map_frame = "map",
-  tracking_frame = "laser",
-  published_frame = "laser",
+  -- You are tracking base_link, since your urdf is describing how your robot
+  -- looks in relation to it.
+  tracking_frame = "base_link",
+  published_frame = "base_link",
   odom_frame = "odom",
   provide_odom_frame = true,
   use_odometry = false,
@@ -38,6 +40,8 @@ TRAJECTORY_BUILDER_2D.laser_missing_echo_ray_length = 1.
 TRAJECTORY_BUILDER_2D.use_imu_data = false
 TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
 
-SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 1e2
+-- No need to change the huber_scale. But your laser is very consistent, so you
+-- should only accept really good loop closing constraints.
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.8
 
 return options
