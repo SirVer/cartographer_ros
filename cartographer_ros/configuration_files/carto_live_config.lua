@@ -32,9 +32,10 @@ options = {
 
 MAP_BUILDER.use_trajectory_builder_2d = true
 
-TRAJECTORY_BUILDER_2D.use_imu_data = true
+TRAJECTORY_BUILDER_2D.use_imu_data = false
+TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
 TRAJECTORY_BUILDER_2D.laser_min_range = 0.01
-TRAJECTORY_BUILDER_2D.laser_max_range = 20.
+TRAJECTORY_BUILDER_2D.laser_max_range = 50.
 TRAJECTORY_BUILDER_2D.submaps.resolution = 0.05
 
 SPARSE_POSE_GRAPH.optimize_every_n_scans = 90
