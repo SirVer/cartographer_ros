@@ -1,14 +1,17 @@
 <launch>
-  <param name="/use_sim_time" value="false" />
+  <param name="/use_sim_time" value="true" />
 
   <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
           -configuration_directory $(find cartographer_ros)/configuration_files
-          -configuration_basename demo_husky.lua"
+          -configuration_basename demo_myrobot.lua"
       output="screen">
     <remap from="odom" to="odometry/filtered" />
   </node>
 
    <node name="rviz" pkg="rviz" type="rviz" required="true"
       args="-d $(find cartographer_ros)/configuration_files/demo_myrobot.rviz" />
+
+   <node name="playbag" pkg="rosbag" type="play"
+     args="--clock $(arg bag_filename) --topics /scan" />
 </launch>
