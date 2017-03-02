@@ -17,12 +17,11 @@ options = {
 }
 
 MAP_BUILDER.use_trajectory_builder_2d = true
-SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 1e2
 TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
 TRAJECTORY_BUILDER_2D.use_imu_data = false
+TRAJECTORY_BUILDER_2D.laser_max_range = 50
+TRAJECTORY_BUILDER_2D.submaps.resolution = 0.15
 
---SPARSE_POSE_GRAPH.constraint_builder.max_constraint_distance = 30.
-
-
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.70
 
 return options
