@@ -58,6 +58,9 @@ DEFINE_string(bag_filename, "", "Bag to process.");
 DEFINE_string(
     trajectory_filename, "",
     "Proto containing the trajectory written by /finish_trajectory service.");
+DEFINE_bool(
+    use_bag_transforms, true,
+    "Whether to read and use the transforms from the bag.");
 
 namespace cartographer_ros {
 namespace {
@@ -117,7 +120,7 @@ void HandleMessage(
       ToPointCloudWithIntensities(message);
   CHECK(point_cloud.intensities.size() == point_cloud.points.size());
 
-  for (int i = 0; i < point_cloud.points.size(); ++i) {
+  for (size_t i = 0; i < point_cloud.points.size(); ++i) {
     batch->points.push_back(sensor_to_map * point_cloud.points[i]);
     batch->intensities.push_back(point_cloud.intensities[i]);
   }
@@ -150,12 +153,16 @@ void Run(const string& trajectory_filename, const string& bag_filename,
       builder.CreatePipeline(
           lua_parameter_dictionary.GetDictionary("pipeline").get());
 
-  auto tf_buffer = ::cartographer::common::make_unique<tf2_ros::Buffer>();
+  auto tf_buffer =
+      ::cartographer::common::make_unique<tf2_ros::Buffer>(::ros::DURATION_MAX);
+
+  if (FLAGS_use_bag_transforms) {
+    LOG(INFO) << "Pre-loading transforms from bag...";
+    ReadTransformsFromBag(bag_filename, tf_buffer.get());
+  }
+
   if (!urdf_filename.empty()) {
     ReadStaticTransformsFromUrdf(urdf_filename, tf_buffer.get());
-  } else {
-    LOG(INFO) << "Pre-loading transforms from bag...";
-    tf_buffer = ReadTransformsFromBag(bag_filename);
   }
 
   const string tracking_frame =
