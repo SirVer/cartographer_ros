@@ -30,10 +30,11 @@ options = {
   pose_publish_period_sec = 5e-3,
 }
 
-TRAJECTORY_BUILDER_3D.scans_per_accumulation = 2
+TRAJECTORY_BUILDER_3D.scans_per_accumulation = 100
 
 -- No point of trying to SLAM over the points on your car.
-TRAJECTORY_BUILDER_3D.laser_min_range = 2.
+TRAJECTORY_BUILDER_3D.laser_min_range = 2.5
+TRAJECTORY_BUILDER_3D.laser_max_range = 150
 
 -- These were just my first guess: use more points for SLAMing and adapt a bit for the ranges that are bigger for cars.
 TRAJECTORY_BUILDER_3D.high_resolution_adaptive_voxel_filter.max_length = 5.
@@ -47,29 +48,31 @@ TRAJECTORY_BUILDER_3D.low_resolution_adaptive_voxel_filter.min_num_points = 400.
 -- you might need to increase 'low_resolution'. Increasing the
 -- '*num_iterations' in the various optimization problems also trades
 -- performance/quality.
-TRAJECTORY_BUILDER_3D.submaps.num_laser_fans = 80
+TRAJECTORY_BUILDER_3D.submaps.num_laser_fans = 70
 TRAJECTORY_BUILDER_3D.submaps.high_resolution = .25
+TRAJECTORY_BUILDER_3D.submaps.low_resolution = .60
+TRAJECTORY_BUILDER_3D.ceres_scan_matcher.ceres_solver_options.max_num_iterations = 50
 
 MAP_BUILDER.use_trajectory_builder_3d = true
-MAP_BUILDER.num_background_threads = 7
+MAP_BUILDER.num_background_threads = 30
 MAP_BUILDER.sparse_pose_graph.optimization_problem.huber_scale = 5e2
 
 -- Trying loop closing too often will cost CPU and not buy you a lot. There is
 -- little point in trying more than once per submap.
-MAP_BUILDER.sparse_pose_graph.optimize_every_n_scans = 100
+MAP_BUILDER.sparse_pose_graph.optimize_every_n_scans = 40
 MAP_BUILDER.sparse_pose_graph.constraint_builder.sampling_ratio = 0.03
-MAP_BUILDER.sparse_pose_graph.optimization_problem.ceres_solver_options.max_num_iterations = 100
+MAP_BUILDER.sparse_pose_graph.optimization_problem.ceres_solver_options.max_num_iterations = 200
 -- Reuse the coarser 3D voxel filter to speed up the computation of loop closure
 -- constraints.
 MAP_BUILDER.sparse_pose_graph.constraint_builder.adaptive_voxel_filter = TRAJECTORY_BUILDER_3D.high_resolution_adaptive_voxel_filter
 
--- This is probably the most important change: lower the matching score for
--- adding constraints.
-MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.4
+MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.5
 
-
-MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.linear_xy_search_window = 20.
-MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.linear_z_search_window = 5.
-MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.angular_search_window = math.rad(30.)
+-- Crazy search window to force loop closure to work. All other changes are probably not needed.
+MAP_BUILDER.sparse_pose_graph.constraint_builder.max_constraint_distance = 250.
+MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.linear_xy_search_window = 250.
+MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.linear_z_search_window = 30.
+MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.angular_search_window = math.rad(60.)
+MAP_BUILDER.sparse_pose_graph.constraint_builder.ceres_scan_matcher_3d.ceres_solver_options.max_num_iterations = 50
 
 return options

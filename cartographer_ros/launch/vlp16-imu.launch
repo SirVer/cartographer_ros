@@ -15,6 +15,8 @@
 -->
 
 <launch>
+  <param name="/use_sim_time" value="true" />
+
   <param name="robot_description"
     textfile="$(find cartographer_ros)/urdf/vlp16-imu.urdf" />
 
@@ -28,4 +30,9 @@
       output="screen">
     <remap from="points2" to="velodyne" />
   </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/demo_3d.rviz" />
+  <node name="playbag" pkg="rosbag" type="play"
+      args="-r 2.5 --clock $(arg bag_filename)" />
 </launch>
