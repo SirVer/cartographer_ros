@@ -1,0 +1,53 @@
+<launch>
+
+  <!-- rosbag filter Grabacion_2017-03-20-13-55-16.bag filtered.bag '(topic != "/tf") or (topic == "/tf" and m.transforms[0].header.frame_id != "map")' -->
+  <!-- |||Parametros||| -->
+  <!-- Hokuyo -->
+  <param name="calibrate_time" type="bool" value="true"/>
+  <!-- Robot State Publisher -->
+  <param name="robot_description" textfile="$(find cartographer_ros)/urdf/amigobot_brazolinx.urdf"/>
+  <param name="publish_frequency" type="double" value="200"/>
+  <param name="use_tf_static" type="bool" value="true"/>
+  <!-- Rqt Graph -->
+  <param name="enable_statistics" type="bool" value="true"/>
+  <param name="/use_sim_time" value="true"/>
+
+  <!-- |||Nodos||| -->
+
+  <!-- Cargar Rviz -->
+  <node name="modelvisualisation" pkg="rviz" type="rviz" output="log"
+    args="-d $(find cartographer_ros)/configuration_files/completo2.rviz">
+  </node>
+
+  <!--node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="log">
+    <param name="publish_frequency" type="double" value="100"/>
+  </node-->
+
+  <!-- |||Opcionales||| -->
+  <!-- Para grabar la sesion de ROS -->
+  <!--node if="$(arg rosbag)" pkg="rosbag" type="record" name="rosbag_record" args="-o $(find reconstruccion_3d)/bags/Grabacion /tf /tf_static /slam_out /cloud_in /odom"/-->
+  <!-- Para graficar los nodos -->
+  <node name="rosbag_play" pkg="rosbag" type="play" args="$(find cartographer_ros)/bags/filtered_sin_mapa_ni_odom.bag --clock"/>
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" output="log"/>
+
+  <!-- Para el octomap -->
+  <!--node if="$(arg octo)" type="octomap_server_node" pkg="octomap_server" name="octomap_server_node">
+    <param name="frame_id" type="string" value="map" />
+    <param name="resolution" type="double" value="0.03" />
+  </node-->
+
+  <!-- Usar SLAM -->
+  <node name="cartographer_node" pkg="cartographer_ros" type="cartographer_node" output="log"
+    args="-configuration_directory $(find cartographer_ros)/configuration_files
+          -configuration_basename backpack_2d_odom_v4.lua">
+    <remap from="scan" to="slam_out" />
+  </node>
+
+  <!-- DEBUG -->
+  <!-- Para leer y escribir mensajes manualmente -->
+  <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/>
+  <!-- Para probar las acciones -->
+  <!--node if="$(arg debug)" name="axclient" pkg="actionlib" type="axclient.py" output="screen" args="/construccion_3d"/-->
+  <!--node if="$(arg debug)" name="axclient" pkg="actionlib" type="axclient.py" output="screen" args="/explore_server"/-->
+
+</launch>
