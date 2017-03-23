@@ -65,8 +65,8 @@ TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
 -- search window got rid of some of the wrong constraints, reducing the score
 -- made sure the correct loop closure was found too. The map was still terrible,
 -- because the wrong loop constraint messed things up.
-SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.60
-SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher.linear_search_window = 5.
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.65
+SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher.linear_search_window = 3.
 
 -- Reducing this setting gives local SLAM more weight vs loop closure, which
 -- was sufficient to get the whole system agree on the correct system.
