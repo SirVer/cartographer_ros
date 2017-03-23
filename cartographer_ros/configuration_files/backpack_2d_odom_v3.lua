@@ -39,13 +39,38 @@ options = {
 
 MAP_BUILDER.use_trajectory_builder_2d = true
 
+-- Trust the constant velocity model more (this is putting more weight on odometry)
+TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight = 70
+TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight = 300
+
 TRAJECTORY_BUILDER_2D.laser_min_range = 0.02
 TRAJECTORY_BUILDER_2D.laser_max_range = 4.0
-TRAJECTORY_BUILDER_2D.laser_missing_echo_ray_length = 1.
 TRAJECTORY_BUILDER_2D.use_imu_data = false
+
+-- This is sometimes useful for debugging.
+-- TRAJECTORY_BUILDER_2D.submaps.laser_fan_inserter.insert_free_space = false
+-- TRAJECTORY_BUILDER_2D.submaps.output_debug_images = true
+
+-- Made submaps smaller and since the laser is so good made resolution smaller -> more features.
+TRAJECTORY_BUILDER_2D.submaps.num_laser_fans = 35
+TRAJECTORY_BUILDER_2D.submaps.resolution = 0.035
+SPARSE_POSE_GRAPH.optimize_every_n_scans = 35
+
 TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
 
---SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.8
-SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.8
+-- This was the actual tricky bit: the score histogram's showed that a lot of
+-- really bogus loop closing constraint have been put into the graph, likely
+-- because of the very similar looking long corridors. And they had high
+-- scores. The real loop closure at the end was not caught though. Reducing the
+-- search window got rid of some of the wrong constraints, reducing the score
+-- made sure the correct loop closure was found too. The map was still terrible,
+-- because the wrong loop constraint messed things up.
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.60
+SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher.linear_search_window = 5.
+
+-- Reducing this setting gives local SLAM more weight vs loop closure, which
+-- was sufficient to get the whole system agree on the correct system.
+SPARSE_POSE_GRAPH.constraint_builder.ceres_scan_matcher.covariance_scale = 1e-2
+SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 1e2
 
 return options

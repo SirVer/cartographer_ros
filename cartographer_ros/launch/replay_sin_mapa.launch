@@ -3,10 +3,11 @@
   <!-- rosbag filter Grabacion_2017-03-20-13-55-16.bag filtered.bag '(topic != "/tf") or (topic == "/tf" and m.transforms[0].header.frame_id != "map")' -->
   <!-- |||Parametros||| -->
   <!-- Hokuyo -->
-  <param name="calibrate_time" type="bool" value="true"/>
+  <!-- This is dangerous: We saw timestamps of the laser jump backwards in time with this. This confuses Cartographer - it will crash then. You want to set this to false -->
+  <!-- <param name="calibrate_time" type="bool" value="true"/> -->
   <!-- Robot State Publisher -->
-  <param name="robot_description" textfile="$(find cartographer_ros)/urdf/amigobot_brazolinx.urdf"/>
-  <param name="publish_frequency" type="double" value="200"/>
+  <!-- <param name="robot_description" textfile="$(find cartographer_ros)/urdf/amigobot_brazolinx.urdf"/> -->
+  <!-- <param name="publish_frequency" type="double" value="200"/> -->
   <param name="use_tf_static" type="bool" value="true"/>
   <!-- Rqt Graph -->
   <param name="enable_statistics" type="bool" value="true"/>
@@ -19,16 +20,18 @@
     args="-d $(find cartographer_ros)/configuration_files/completo2.rviz">
   </node>
 
-  <!--node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="log">
-    <param name="publish_frequency" type="double" value="100"/>
-  </node-->
+  <!-- <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="log"> -->
+    <!-- <param name="publish_frequency" type="double" value="100"/> -->
+  <!-- </node> -->
 
   <!-- |||Opcionales||| -->
   <!-- Para grabar la sesion de ROS -->
   <!--node if="$(arg rosbag)" pkg="rosbag" type="record" name="rosbag_record" args="-o $(find reconstruccion_3d)/bags/Grabacion /tf /tf_static /slam_out /cloud_in /odom"/-->
   <!-- Para graficar los nodos -->
-  <node name="rosbag_play" pkg="rosbag" type="play" args="$(find cartographer_ros)/bags/filtered_sin_mapa.bag --clock"/>
-  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" output="log"/>
+  <node name="playbag" pkg="rosbag" type="play" args="-r3.5 --clock $(arg bag_filename)">
+    <remap from="tf" to="tf_in" />
+  </node>
+  <!-- <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" output="log"/> -->
 
   <!-- Para el octomap -->
   <!--node if="$(arg octo)" type="octomap_server_node" pkg="octomap_server" name="octomap_server_node">
@@ -36,8 +39,16 @@
     <param name="resolution" type="double" value="0.03" />
   </node-->
 
+  <node name="tf_remove_frames" pkg="cartographer_ros"
+      type="tf_remove_frames.py">
+    <remap from="tf_out" to="/tf" />
+    <rosparam param="remove_frames">
+      - map
+    </rosparam>
+  </node>
+
   <!-- Usar SLAM -->
-	<node name="cartographer_node" pkg="cartographer_ros" type="cartographer_node" output="log"
+	<node name="cartographer_node" pkg="cartographer_ros" type="cartographer_node" output="screen"
     args="-configuration_directory $(find cartographer_ros)/configuration_files
 	        -configuration_basename backpack_2d_odom_v3.lua">
     <remap from="scan" to="slam_out" />
@@ -45,7 +56,7 @@
 
   <!-- DEBUG -->
   <!-- Para leer y escribir mensajes manualmente -->
-  <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/>
+  <!-- <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/> -->
   <!-- Para probar las acciones -->
   <!--node if="$(arg debug)" name="axclient" pkg="actionlib" type="axclient.py" output="screen" args="/construccion_3d"/-->
   <!--node if="$(arg debug)" name="axclient" pkg="actionlib" type="axclient.py" output="screen" args="/explore_server"/-->
