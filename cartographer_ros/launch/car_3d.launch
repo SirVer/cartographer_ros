@@ -15,14 +15,10 @@
 -->
 
 <launch>
-
-
-
   <!-- start cloud nodelet -->
   <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch" />
 
-
-<param name="robot_description"
+  <param name="robot_description"
     textfile="$(find cartographer_ros)/urdf/car_3d.urdf" />
 
   <node name="robot_state_publisher" pkg="robot_state_publisher"
@@ -33,5 +29,7 @@
           -configuration_directory $(find cartographer_ros)/configuration_files
           -configuration_basename car_3d.lua"
       output="screen">
+    <remap from="/points2" to="/velodyne_points" />
+    <remap from="/imu" to="/vehicle/imu/data_raw" />
   </node>
 </launch>

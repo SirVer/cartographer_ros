@@ -58,11 +58,12 @@ void SensorBridge::HandleOdometryMessage(
 
 void SensorBridge::HandleImuMessage(const string& sensor_id,
                                     const sensor_msgs::Imu::ConstPtr& msg) {
-  CHECK_NE(msg->linear_acceleration_covariance[0], -1);
-  CHECK_NE(msg->angular_velocity_covariance[0], -1);
+  // CHECK_NE(msg->linear_acceleration_covariance[0], -1);
+  // CHECK_NE(msg->angular_velocity_covariance[0], -1);
   const carto::common::Time time = FromRos(msg->header.stamp);
+  const string frame_id = "imu";
   const auto sensor_to_tracking = tf_bridge_.LookupToTracking(
-      time, CheckNoLeadingSlash(msg->header.frame_id));
+      time, CheckNoLeadingSlash(frame_id));
   if (sensor_to_tracking != nullptr) {
     CHECK(sensor_to_tracking->translation().norm() < 1e-5)
         << "The IMU frame must be colocated with the tracking frame. "

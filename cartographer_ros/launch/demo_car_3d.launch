@@ -23,7 +23,7 @@
   <node name="rviz" pkg="rviz" type="rviz" required="true"
       args="-d $(find cartographer_ros)/configuration_files/demo_car_3d.rviz" />
   <node name="playbag" pkg="rosbag" type="play"
-      args="--clock $(arg bag_filename) -r 0.8" >
+    args="--clock --bags $(arg bag_filename) -r 0.8 --topics /vehicle/imu/data_raw /velodyne_packets" >
 
   <remap from="/imu/data" to="/imu_old" />
 
