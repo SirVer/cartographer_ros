@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <csignal>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -32,6 +33,7 @@
 #include "rosbag/view.h"
 #include "rosgraph_msgs/Clock.h"
 #include "tf2_msgs/TFMessage.h"
+#include "tf2_ros/static_transform_broadcaster.h"
 #include "urdf/model.h"
 
 DEFINE_string(configuration_directory, "",
@@ -45,12 +47,19 @@ DEFINE_string(bag_filenames, "", "Comma-separated list of bags to process.");
 DEFINE_string(
     urdf_filename, "",
     "URDF file that contains static links for your sensor configuration.");
+DEFINE_bool(use_bag_transforms, true,
+            "Whether to read, use and republish the transforms from the bag.");
 
 namespace cartographer_ros {
 namespace {
 
 constexpr int kLatestOnlyPublisherQueueSize = 1;
 constexpr char kClockTopic[] = "clock";
+constexpr char kTfTopic[] = "tf";
+
+volatile std::sig_atomic_t sigint_triggered = 0;
+
+void SigintHandler(int) { sigint_triggered = 1; }
 
 std::vector<string> SplitString(const string& input, const char delimiter) {
   std::stringstream stream(input);
@@ -62,7 +71,7 @@ std::vector<string> SplitString(const string& input, const char delimiter) {
   return tokens;
 }
 
-void Run(std::vector<string> bag_filenames) {
+NodeOptions LoadOptions() {
   auto file_resolver = cartographer::common::make_unique<
       cartographer::common::ConfigurationFileResolver>(
       std::vector<string>{FLAGS_configuration_directory});
@@ -71,18 +80,30 @@ void Run(std::vector<string> bag_filenames) {
   cartographer::common::LuaParameterDictionary lua_parameter_dictionary(
       code, std::move(file_resolver));
 
-  auto tf_buffer = ::cartographer::common::make_unique<tf2_ros::Buffer>();
-  if (!FLAGS_urdf_filename.empty()) {
-    ReadStaticTransformsFromUrdf(FLAGS_urdf_filename, tf_buffer.get());
-  } else {
+  return CreateNodeOptions(&lua_parameter_dictionary);
+}
+
+void Run(const std::vector<string>& bag_filenames) {
+  auto options = LoadOptions();
+
+  auto tf_buffer =
+      ::cartographer::common::make_unique<tf2_ros::Buffer>(::ros::DURATION_MAX);
+
+  if (FLAGS_use_bag_transforms) {
     LOG(INFO) << "Pre-loading transforms from bag...";
     // TODO(damonkohler): Support multi-trajectory.
     CHECK_EQ(bag_filenames.size(), 1);
-    tf_buffer = ReadTransformsFromBag(bag_filenames.back());
+    ReadTransformsFromBag(bag_filenames.back(), tf_buffer.get());
   }
+
+  std::vector<geometry_msgs::TransformStamped> urdf_transforms;
+  if (!FLAGS_urdf_filename.empty()) {
+    urdf_transforms =
+        ReadStaticTransformsFromUrdf(FLAGS_urdf_filename, tf_buffer.get());
+  }
+
   tf_buffer->setUsingDedicatedThread(true);
 
-  auto options = CreateNodeOptions(&lua_parameter_dictionary);
   // Since we preload the transform buffer, we should never have to wait for a
   // transform. When we finish processing the bag, we will simply drop any
   // remaining sensor data that cannot be transformed due to missing transforms.
@@ -129,13 +150,23 @@ void Run(std::vector<string> bag_filenames) {
     check_insert(kOdometryTopic);
   }
 
+  ::ros::Publisher tf_publisher =
+      node.node_handle()->advertise<tf2_msgs::TFMessage>(
+          kTfTopic, kLatestOnlyPublisherQueueSize);
+
+  ::tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
+
   ::ros::Publisher clock_publisher =
       node.node_handle()->advertise<rosgraph_msgs::Clock>(
           kClockTopic, kLatestOnlyPublisherQueueSize);
 
+  if (urdf_transforms.size() > 0) {
+    static_tf_broadcaster.sendTransform(urdf_transforms);
+  }
+
   for (const string& bag_filename : bag_filenames) {
-    if (!::ros::ok()) {
-      return;
+    if (sigint_triggered) {
+      break;
     }
 
     const int trajectory_id = node.map_builder_bridge()->AddTrajectory(
@@ -148,11 +179,15 @@ void Run(std::vector<string> bag_filenames) {
     const double duration_in_seconds = (view.getEndTime() - begin_time).toSec();
 
     for (const rosbag::MessageInstance& msg : view) {
-      if (!::ros::ok()) {
-        return;
+      if (sigint_triggered) {
+        break;
       }
 
-      // TODO(damonkohler): Republish non-conflicting tf messages.
+      if (FLAGS_use_bag_transforms && msg.isType<tf2_msgs::TFMessage>()) {
+        auto tf_message = msg.instantiate<tf2_msgs::TFMessage>();
+        tf_publisher.publish(tf_message);
+      }
+
       const string topic =
           node.node_handle()->resolveName(msg.getTopic(), false /* resolve */);
       if (expected_sensor_ids.count(topic) == 0) {
@@ -219,7 +254,9 @@ int main(int argc, char** argv) {
       << "-configuration_basename is missing.";
   CHECK(!FLAGS_bag_filenames.empty()) << "-bag_filenames is missing.";
 
-  ::ros::init(argc, argv, "cartographer_offline_node");
+  std::signal(SIGINT, &::cartographer_ros::SigintHandler);
+  ::ros::init(argc, argv, "cartographer_offline_node",
+              ::ros::init_options::NoSigintHandler);
   ::ros::start();
 
   cartographer_ros::ScopedRosLogSink ros_log_sink;

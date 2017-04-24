@@ -17,12 +17,14 @@
 #include "cartographer_ros/assets_writer.h"
 
 #include "cartographer/common/make_unique.h"
+#include "cartographer/common/time.h"
+#include "cartographer/io/file_writer.h"
 #include "cartographer/io/null_points_processor.h"
 #include "cartographer/io/ply_writing_points_processor.h"
 #include "cartographer/io/points_processor.h"
 #include "cartographer/io/xray_points_processor.h"
 #include "cartographer/mapping/proto/trajectory.pb.h"
-#include "cartographer/mapping_2d/proto/laser_fan_inserter_options.pb.h"
+#include "cartographer/mapping_2d/proto/range_data_inserter_options.pb.h"
 #include "cartographer_ros/map_writer.h"
 #include "cartographer_ros/occupancy_grid.h"
 #include "nav_msgs/OccupancyGrid.h"
@@ -33,7 +35,7 @@ namespace {
 
 namespace carto = ::cartographer;
 
-// Writes an occupany grid.
+// Writes an occupancy grid.
 void Write2DAssets(const std::vector<::cartographer::mapping::TrajectoryNode>&
                        trajectory_nodes,
                    const NodeOptions& options, const std::string& stem) {
@@ -47,32 +49,37 @@ void Write2DAssets(const std::vector<::cartographer::mapping::TrajectoryNode>&
 void Write3DAssets(const std::vector<::cartographer::mapping::TrajectoryNode>&
                        trajectory_nodes,
                    const double voxel_size, const std::string& stem) {
+  const auto file_writer_factory = [](const string& filename) {
+    return carto::common::make_unique<carto::io::StreamFileWriter>(filename);
+  };
+
   carto::io::NullPointsProcessor null_points_processor;
   carto::io::XRayPointsProcessor xy_xray_points_processor(
       voxel_size, carto::transform::Rigid3f::Rotation(
                       Eigen::AngleAxisf(-M_PI / 2.f, Eigen::Vector3f::UnitY())),
-      {}, stem + "_xray_xy", &null_points_processor);
+      {}, stem + "_xray_xy", file_writer_factory, &null_points_processor);
   carto::io::XRayPointsProcessor yz_xray_points_processor(
       voxel_size, carto::transform::Rigid3f::Rotation(
                       Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitZ())),
-      {}, stem + "_xray_yz", &xy_xray_points_processor);
+      {}, stem + "_xray_yz", file_writer_factory, &xy_xray_points_processor);
   carto::io::XRayPointsProcessor xz_xray_points_processor(
       voxel_size, carto::transform::Rigid3f::Rotation(
                       Eigen::AngleAxisf(-M_PI / 2.f, Eigen::Vector3f::UnitZ())),
-      {}, stem + "_xray_xz", &yz_xray_points_processor);
+      {}, stem + "_xray_xz", file_writer_factory, &yz_xray_points_processor);
   carto::io::PlyWritingPointsProcessor ply_writing_points_processor(
-      stem + ".ply", &xz_xray_points_processor);
+      file_writer_factory(stem + ".ply"), &xz_xray_points_processor);
 
   for (const auto& node : trajectory_nodes) {
-    const carto::sensor::LaserFan laser_fan = carto::sensor::TransformLaserFan(
-        carto::sensor::Decompress(node.constant_data->laser_fan_3d),
-        node.pose.cast<float>());
+    const carto::sensor::RangeData range_data =
+        carto::sensor::TransformRangeData(
+            carto::sensor::Decompress(node.constant_data->range_data_3d),
+            node.pose.cast<float>());
 
     auto points_batch = carto::common::make_unique<carto::io::PointsBatch>();
-    points_batch->origin = laser_fan.origin;
-    points_batch->points = laser_fan.returns;
+    points_batch->origin = range_data.origin;
+    points_batch->points = range_data.returns;
     for (const uint8 reflectivity :
-         node.constant_data->laser_fan_3d.reflectivities) {
+         node.constant_data->range_data_3d.reflectivities) {
       points_batch->colors.push_back(
           carto::io::Color{{reflectivity, reflectivity, reflectivity}});
     }
@@ -86,11 +93,18 @@ void Write3DAssets(const std::vector<::cartographer::mapping::TrajectoryNode>&
 void WriteAssets(const std::vector<::cartographer::mapping::TrajectoryNode>&
                      trajectory_nodes,
                  const NodeOptions& options, const std::string& stem) {
+  carto::mapping::proto::Trajectory trajectory;
+  for (const auto& node : trajectory_nodes) {
+    const auto& data = *node.constant_data;
+    auto* node_proto = trajectory.add_node();
+    node_proto->set_timestamp(carto::common::ToUniversal(data.time));
+    *node_proto->mutable_pose() =
+        carto::transform::ToProto(node.pose * data.tracking_to_pose);
+  }
+
   // Write the trajectory.
   std::ofstream proto_file(stem + ".pb",
                            std::ios_base::out | std::ios_base::binary);
-  const carto::mapping::proto::Trajectory trajectory =
-      carto::mapping::ToProto(trajectory_nodes);
   CHECK(trajectory.SerializeToOstream(&proto_file))
       << "Could not serialize trajectory.";
   proto_file.close();

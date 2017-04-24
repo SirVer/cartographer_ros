@@ -29,14 +29,12 @@ namespace cartographer_ros {
 
 constexpr char kTfStaticTopic[] = "/tf_static";
 
-std::unique_ptr<tf2_ros::Buffer> ReadTransformsFromBag(
-    const string& bag_filename) {
+void ReadTransformsFromBag(const string& bag_filename,
+                           tf2_ros::Buffer* const tf_buffer) {
   rosbag::Bag bag;
   bag.open(bag_filename, rosbag::bagmode::Read);
   rosbag::View view(bag);
 
-  auto tf_buffer =
-      ::cartographer::common::make_unique<tf2_ros::Buffer>(::ros::DURATION_MAX);
   const ::ros::Time begin_time = view.getBeginTime();
   const double duration_in_seconds = (view.getEndTime() - begin_time).toSec();
   for (const rosbag::MessageInstance& msg : view) {
@@ -52,13 +50,12 @@ std::unique_ptr<tf2_ros::Buffer> ReadTransformsFromBag(
         }
       }
     }
-    LOG_EVERY_N(INFO, 100000) << "Processed "
-                              << (msg.getTime() - begin_time).toSec() << " of "
-                              << duration_in_seconds << " bag time seconds...";
+    LOG_EVERY_N(INFO, 100000)
+        << "Processed " << (msg.getTime() - begin_time).toSec() << " of "
+        << duration_in_seconds << " bag time seconds...";
   }
 
   bag.close();
-  return tf_buffer;
 }
 
 }  // namespace cartographer_ros

@@ -39,7 +39,7 @@ namespace {
 
 constexpr int kInfiniteSubscriberQueueSize = 0;
 
-void Run() {
+NodeOptions LoadOptions() {
   auto file_resolver = cartographer::common::make_unique<
       cartographer::common::ConfigurationFileResolver>(
       std::vector<string>{FLAGS_configuration_directory});
@@ -48,7 +48,11 @@ void Run() {
   cartographer::common::LuaParameterDictionary lua_parameter_dictionary(
       code, std::move(file_resolver));
 
-  const auto options = CreateNodeOptions(&lua_parameter_dictionary);
+  return CreateNodeOptions(&lua_parameter_dictionary);
+}
+
+void Run() {
+  const auto options = LoadOptions();
   constexpr double kTfBufferCacheTimeInSeconds = 1e6;
   tf2_ros::Buffer tf_buffer{::ros::Duration(kTfBufferCacheTimeInSeconds)};
   tf2_ros::TransformListener tf(tf_buffer);
@@ -144,16 +148,17 @@ void Run() {
           kFinishTrajectoryServiceName,
           boost::function<bool(
               ::cartographer_ros_msgs::FinishTrajectory::Request&,
-              ::cartographer_ros_msgs::FinishTrajectory::Response&)>([&](
-              ::cartographer_ros_msgs::FinishTrajectory::Request& request,
-              ::cartographer_ros_msgs::FinishTrajectory::Response&) {
-            const int previous_trajectory_id = trajectory_id;
-            trajectory_id = node.map_builder_bridge()->AddTrajectory(
-                expected_sensor_ids, options.tracking_frame);
-            node.map_builder_bridge()->FinishTrajectory(previous_trajectory_id);
-            node.map_builder_bridge()->WriteAssets(request.stem);
-            return true;
-          }));
+              ::cartographer_ros_msgs::FinishTrajectory::Response&)>(
+              [&](::cartographer_ros_msgs::FinishTrajectory::Request& request,
+                  ::cartographer_ros_msgs::FinishTrajectory::Response&) {
+                const int previous_trajectory_id = trajectory_id;
+                trajectory_id = node.map_builder_bridge()->AddTrajectory(
+                    expected_sensor_ids, options.tracking_frame);
+                node.map_builder_bridge()->FinishTrajectory(
+                    previous_trajectory_id);
+                node.map_builder_bridge()->WriteAssets(request.stem);
+                return true;
+              }));
 
   ::ros::spin();
 
