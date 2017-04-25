@@ -1,0 +1,18 @@
+<launch>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_to_laser_broadcaster" args="0 0 0 0 0 0 base_link laser_frame 50" />
+
+  <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory
+              $(find cartographer_ros)/configuration_files
+          -configuration_basename baxter.lua"
+      output="screen">
+  </node>
+
+   <param name="/use_sim_time" value="true" />
+
+  <node name="playbag" pkg="rosbag" type="play"
+      args="--clock $(arg bag_filename)" />
+
+</launch> 
