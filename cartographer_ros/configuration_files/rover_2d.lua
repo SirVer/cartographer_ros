@@ -36,5 +36,7 @@ TRAJECTORY_BUILDER_2D.submaps.resolution = 0.05
 TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true 
 TRAJECTORY_BUILDER_2D.motion_filter.max_angle_radians = math.rad(1.0)
 
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.angular_search_window = math.rad(5.0)
+
 
 return options

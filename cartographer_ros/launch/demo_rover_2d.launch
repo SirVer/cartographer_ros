@@ -28,5 +28,5 @@
   <node name="rviz" pkg="rviz" type="rviz" required="true"
       args="-d $(find cartographer_ros)/configuration_files/rover_2d.rviz" />
   <node name="playbag" pkg="rosbag" type="play"
-      args="--clock $(arg bag_filename)" />
+      args="-r5 --clock $(arg bag_filename)" />
 </launch>
