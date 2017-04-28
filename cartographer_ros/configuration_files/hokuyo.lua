@@ -33,13 +33,24 @@ options = {
 MAP_BUILDER.use_trajectory_builder_2d = true
 
 TRAJECTORY_BUILDER_2D.laser_min_range = 0.3
-TRAJECTORY_BUILDER_2D.laser_max_range = 30.
-TRAJECTORY_BUILDER_2D.laser_missing_echo_ray_length = 1.
+TRAJECTORY_BUILDER_2D.laser_max_range = 100.
+-- TRAJECTORY_BUILDER_2D.laser_missing_echo_ray_length = 1.
 TRAJECTORY_BUILDER_2D.use_imu_data = false
 TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.linear_search_window = 0.3
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.angular_search_window = math.rad(15)
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.translation_delta_cost_weight = 0.
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.rotation_delta_cost_weight = 0.
 TRAJECTORY_BUILDER_2D.submaps.resolution = 0.1
+TRAJECTORY_BUILDER_2D.submaps.num_range_data = 150
 
-SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.8
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.6
 SPARSE_POSE_GRAPH.optimize_every_n_scans = 100
+SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher.linear_search_window = 15
+SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher.angular_search_window = math.rad(30)
+
+TRAJECTORY_BUILDER_2D.ceres_scan_matcher.ceres_solver_options.max_num_iterations = 200
+-- TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight = 1e-5
+-- TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight = 1e-5
 
 return options

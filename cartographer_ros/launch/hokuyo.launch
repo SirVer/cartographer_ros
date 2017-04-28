@@ -15,11 +15,12 @@
 -->
 
 <launch>
+  <param name="/use_sim_time" value="true" />
 
- <node name="hokuyo" pkg="hokuyo_node" type="hokuyo_node">
-    <param name="port" type="string" value="/dev/ttyACM0"/>
-     <param name="frame_id" value="laser_link" />
-</node>
+ <!-- <node name="hokuyo" pkg="hokuyo_node" type="hokuyo_node"> -->
+    <!-- <param name="port" type="string" value="/dev/ttyACM0"/> -->
+     <!-- <param name="frame_id" value="laser_link" /> -->
+<!-- </node> -->
   <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
           -configuration_directory $(find cartographer_ros)/configuration_files
@@ -29,5 +30,7 @@
 
  <node name="rviz" pkg="rviz" type="rviz" required="true"
       args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz" />
+  <node name="playbag" pkg="rosbag" type="play"
+    args="-r2 --clock --bags=$(arg bag_filename) --topics /scan" />
 
 </launch>
