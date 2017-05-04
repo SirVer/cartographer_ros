@@ -15,17 +15,36 @@
 -->
 
 <launch>
+  <param name="/use_sim_time" value="true" />
 
   <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
-          -configuration_directory $(find catkin_ws)/config
+          -configuration_directory $(find cartographer_ros)/configuration_files
           -configuration_basename backpack_3d.lua"
       output="screen">
 
     <remap from="points2" to="horizontal_laser_3d" />
+  </node>
 
     <!--remap from="points2_1" to="horizontal_laser_3d" />
     <remap from="points2_2" to="vertical_laser_3d" /-->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/cartographer_3d_test.rviz" />
+  <node name="playbag" pkg="rosbag" type="play"
+      args="--clock $(arg bag_filename)">
+      <remap from="tf" to="tf_in" />
+  </node>
+
+
+  <node name="tf_remove_frames" pkg="cartographer_ros"
+      type="tf_remove_frames.py">
+    <remap from="tf_out" to="/tf" />
+    <rosparam param="remove_frames">
+      - map
+      - left_wheel
+      - right_wheel
+      - imu_link
+    </rosparam>
   </node>
 
 </launch>

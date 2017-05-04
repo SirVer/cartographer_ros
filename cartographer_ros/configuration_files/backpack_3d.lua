@@ -27,10 +27,10 @@ options = {
   num_point_clouds = 1,
   lookup_transform_timeout_sec = 0.2,
   submap_publish_period_sec = 0.3,
-  pose_publish_period_sec = 0.1,
+  pose_publish_period_sec = 5e-3,
 }
 
-TRAJECTORY_BUILDER_3D.scans_per_accumulation = 16
+TRAJECTORY_BUILDER_3D.scans_per_accumulation = 1
 
 MAP_BUILDER.use_trajectory_builder_3d = true
 MAP_BUILDER.num_background_threads = 7
