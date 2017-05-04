@@ -18,7 +18,7 @@
 
   <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
-          -configuration_directory $(find catkin_ws)/configuration_files
+          -configuration_directory $(find catkin_ws)/config
           -configuration_basename backpack_3d.lua"
       output="screen">
 

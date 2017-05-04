@@ -17,20 +17,20 @@ include "map_builder.lua"
 options = {
   map_builder = MAP_BUILDER,
   map_frame = "map",
-  tracking_frame = "base_link",
-  published_frame = "base_link",
+  tracking_frame = "chassis",
+  published_frame = "base_footprint",
   odom_frame = "odom",
   provide_odom_frame = true,
   use_odometry = false,
   use_laser_scan = false,
   use_multi_echo_laser_scan = false,
-  num_point_clouds = 2,
+  num_point_clouds = 1,
   lookup_transform_timeout_sec = 0.2,
   submap_publish_period_sec = 0.3,
-  pose_publish_period_sec = 5e-3,
+  pose_publish_period_sec = 0.1,
 }
 
-TRAJECTORY_BUILDER_3D.scans_per_accumulation = 160
+TRAJECTORY_BUILDER_3D.scans_per_accumulation = 16
 
 MAP_BUILDER.use_trajectory_builder_3d = true
 MAP_BUILDER.num_background_threads = 7
