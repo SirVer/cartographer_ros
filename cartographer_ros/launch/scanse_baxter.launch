@@ -22,8 +22,8 @@
             angle_increment: 0.001 # M_PI/360.0
             scan_time: 0.1
             range_min: 0.0
-            range_max: 40.0
-            use_inf: true
+            range_max: 1000.0
+            use_inf: false
 
             # Concurrency level, affects number of pointclouds queued for processing and number of threads used
             # 0 : Detect number of cores
@@ -40,7 +40,7 @@
       type="cartographer_node" args="
           -configuration_directory
               $(find cartographer_ros)/configuration_files
-          -configuration_basename baxter.lua"
+          -configuration_basename scanse_baxter.lua"
       output="screen">
   </node>
 
