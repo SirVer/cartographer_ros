@@ -16,6 +16,7 @@ include "map_builder.lua"
 
 options = {
   map_builder = MAP_BUILDER,
+  trajectoy_builder = TRAJECTORY_BUILDER,
   map_frame = "map",
   tracking_frame = "base_footprint",
   published_frame = "base_footprint",
