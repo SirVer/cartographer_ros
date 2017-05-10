@@ -13,15 +13,16 @@
 -- limitations under the License.
 
 include "map_builder.lua"
+include "trajectory_builder.lua"
 
 options = {
   map_builder = MAP_BUILDER,
-  trajectoy_builder = TRAJECTORY_BUILDER,
+  trajectory_builder = TRAJECTORY_BUILDER,
   map_frame = "map",
   tracking_frame = "base_footprint",
   published_frame = "base_footprint",
   odom_frame = "odom_combined",
-  provide_odom_frame = true,
+  provide_odom_frame = false,
   use_odometry = false,
   use_laser_scan = true,
   use_multi_echo_laser_scan = false,
@@ -35,9 +36,10 @@ MAP_BUILDER.use_trajectory_builder_2d = true
 
 TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
 TRAJECTORY_BUILDER_2D.use_imu_data = false
-TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.linear_search_window = 0.15
-TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.angular_search_window = math.rad(35.)
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.linear_search_window = 0.10
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.angular_search_window = math.rad(15.)
 
 SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 1e2
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.7
 
 return options
