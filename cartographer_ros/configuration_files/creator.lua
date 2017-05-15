@@ -13,9 +13,11 @@
 -- limitations under the License.
 
 include "map_builder.lua"
+include "trajectory_builder.lua"
 
 options = {
   map_builder = MAP_BUILDER,
+  trajectory_builder = TRAJECTORY_BUILDER,
   map_frame = "map",
   tracking_frame = "base_footprint",
   published_frame = "odom",
@@ -32,13 +34,20 @@ options = {
 
 MAP_BUILDER.use_trajectory_builder_2d = true
 
-TRAJECTORY_BUILDER_2D.laser_min_range = 0.48
-TRAJECTORY_BUILDER_2D.laser_max_range = 5.5
-TRAJECTORY_BUILDER_2D.laser_missing_echo_ray_length = 5.
+TRAJECTORY_BUILDER_2D.min_range = 0.48
+TRAJECTORY_BUILDER_2D.max_range = 5.5
+TRAJECTORY_BUILDER_2D.missing_data_ray_length = 5.
 TRAJECTORY_BUILDER_2D.use_imu_data = false
 TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching = true
 TRAJECTORY_BUILDER_2D.motion_filter.max_angle_radians = math.rad(0.1)
+TRAJECTORY_BUILDER_2D.submaps.num_range_data = 60
 
-MAP_BUILDER.sparse_pose_graph.optimization_problem.huber_scale = 1e2
+-- TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.translation_delta_cost_weight = 10.
+TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight = 5e1
+
+SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 1e2
+SPARSE_POSE_GRAPH.optimize_every_n_scans = 60
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.65
+
 
 return options
