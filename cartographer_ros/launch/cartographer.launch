@@ -17,8 +17,6 @@
 <launch>
   <param name="/use_sim_time" value="true"/>
 
-  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock --rate=4 $(arg bag_filename)"/>
-
 
   <!--
   <param name="robot_description"
@@ -27,10 +25,11 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher"
     type="robot_state_publisher" />-->
 
-  <node name="cartographer_node" pkg="cartographer_ros"
-      type="cartographer_node" args="
+  <node name="cartographer_offline_node" pkg="cartographer_ros"
+      type="cartographer_offline_node" args="
           -configuration_directory $(find cartographer_ros)/configuration_files
-          -configuration_basename config.lua"
+          -configuration_basename config.lua
+          -bag_filenames $(arg bag_filename)"
       output="screen">
    <!-- <remap from="odom" to="/base_odometry/odom" /> -->
 	<remap from="scan" to="/base_scan" />

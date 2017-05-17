@@ -40,6 +40,7 @@ TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.linear_search_window = 
 TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.angular_search_window = math.rad(15.)
 
 TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight = 5e1
+TRAJECTORY_BUILDER_2D.submaps.resolution = 0.05
 
 SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 1e2
 SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.7
