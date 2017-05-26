@@ -1,0 +1,142 @@
+<!--
+  Copyright 2016 The Cartographer Authors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<robot name="cartographer_backpack_3d">
+  <material name="orange">
+    <color rgba="1.0 0.5 0.2 1" />
+  </material>
+  <material name="gray">
+    <color rgba="0.2 0.2 0.2 1" />
+  </material>
+  <material name="silver">
+    <color rgba="0.5 0.5 0.5 1" />
+  </material>
+  <material name="blue">
+    <color rgba="0.1 0.1 0.8 0.3" />
+  </material>
+
+
+  <link name="base_link" />
+  <link name="imu_link">
+    <visual>
+      <origin xyz="-0.01 0.0 0.0" />
+      <geometry>
+        <box size="0.06 0.04 0.02" />
+      </geometry>
+      <material name="orange" />
+    </visual>
+  </link>
+  <link name="rechteckrohr_link">
+    <visual>
+      <origin xyz="0.0 0.0 0.0" />
+      <geometry>
+        <box size="0.035 1.7 0.02" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+    <link name="uprofilfront_link">
+      <visual>
+        <origin xyz="0.0 -0.062 0.005" />
+        <geometry>
+          <box size="0.043 0.14 0.023" />
+        </geometry>
+        <material name="silver" />
+      </visual>
+    </link>
+    <link name="uprofilback_link">
+      <visual>
+        <origin xyz="0.0 0.062 0.005" />
+        <geometry>
+          <box size="0.043 0.14 0.023" />
+        </geometry>
+        <material name="silver" />
+      </visual>
+    </link>
+    <link name="car_link">
+      <visual>
+        <origin xyz="0.0 0.0 0.0" />
+        <geometry>
+          <box size="1.6 3.5 0.8" />
+        </geometry>
+        <material name="blue" />
+      </visual>
+      <visual>
+        <origin xyz="0.0 -0.2 0.6" />
+        <geometry>
+          <box size="1.4 2.5 0.4" />
+        </geometry>
+        <material name="blue" />
+      </visual>
+    </link>
+      <link name="vlp16_front_link">
+        <visual>
+          <origin xyz="0.0 0.0 0.0" />
+          <geometry>
+            <cylinder length="0.072" radius="0.05" />
+          </geometry>
+          <material name="orange" />
+        </visual>
+      </link>
+      <link name="vlp16_back_link">
+        <visual>
+          <origin xyz="0.0 0.0 0.0" />
+          <geometry>
+            <cylinder length="0.072" radius="0.05" />
+          </geometry>
+          <material name="orange" />
+        </visual>
+      </link>
+
+  <joint name="imu_link_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0 0 0" rpy="3.1416 0 -0.005236" /> <!-- 3.1416 -->
+  </joint>
+
+  <joint name="rechteckrohr_link_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="rechteckrohr_link" />
+    <origin xyz="-0.008 0.6623 -0.015" rpy="0 0 0" /> <!-- 3.1416 -->
+  </joint>
+    <joint name="uprofilfront_link_joint" type="fixed">
+      <parent link="rechteckrohr_link" />
+      <child link="uprofilfront_link" />
+      <origin xyz="0.0 0.8405 0.0045" rpy="-0.1710423 0 0" /> <!-- 10° = 0.17453 -->
+    </joint>
+    <joint name="vlp16_link_joint" type="fixed">
+      <parent link="uprofilfront_link" />
+      <child link="vlp16_front_link" />
+      <origin xyz="0 -0.0275 0.053" rpy="0 0 3.1416" /> <!-- 14° =0.2443, 3° = 0.05236, optical center +37,8mm -->
+    </joint>
+
+    <joint name="uprofilback_link_joint" type="fixed">
+      <parent link="rechteckrohr_link" />
+      <child link="uprofilback_link" />
+      <origin xyz="0.0 -0.844 0.004" rpy="0.1710423 -0.0069813 0" /> <!-- 10° = 0.17453 -->
+    </joint>
+    <joint name="vlp16_link_back_joint" type="fixed">
+      <parent link="uprofilback_link" />
+      <child link="vlp16_back_link" />
+      <origin xyz="0 0.027 0.0538" rpy="0 0 3.1416" /> <!-- 14° =0.2443, 3° = 0.05236, optical center +37,8mm -->
+    </joint>
+
+  <joint name="car_link_joint" type="fixed">
+    <parent link="rechteckrohr_link" />
+    <child link="car_link" />
+    <origin xyz="0 0.18 -0.8" rpy="0 0 0" />
+  </joint>
+</robot>
