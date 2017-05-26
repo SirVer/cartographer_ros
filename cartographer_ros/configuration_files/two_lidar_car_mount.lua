@@ -32,16 +32,17 @@ options = {
   pose_publish_period_sec = 5e-3,
 }
 
-TRAJECTORY_BUILDER_3D.scans_per_accumulation = 10
+TRAJECTORY_BUILDER_3D.scans_per_accumulation = 2
 TRAJECTORY_BUILDER_3D.min_range = 2
 --TRAJECTORY_BUILDER_3D.max_range = 20 -- needs a wall in all directions to localize
+NUM_SCANS_PER_SUBMAP = 120
 
 --TRAJECTORY_BUILDER_3D.submaps.high_resolution = 0.05 -- default 0.10, high res 0.01, mid 0.03
 --TRAJECTORY_BUILDER_3D.submaps.low_resolution =  0.23 -- default 0.45, high res 0.15, mid 0.25
 --TRAJECTORY_BUILDER_3D.submaps.range_data_inserter.num_free_space_voxels = 10 -- use to correct Rotation around x-Axis
---TRAJECTORY_BUILDER_3D.submaps.num_range_data = 160 --dec-/increase number of submaps
+TRAJECTORY_BUILDER_3D.submaps.num_range_data = NUM_SCANS_PER_SUBMAP --dec-/increase number of submaps
 
-TRAJECTORY_BUILDER_3D.ceres_scan_matcher.rotation_weight = 6.6e3 --3acc: 3.5e3, 1acc 6.8e3, def:2e3
+-- TRAJECTORY_BUILDER_3D.ceres_scan_matcher.rotation_weight = 6.6e3 --3acc: 3.5e3, 1acc 6.8e3, def:2e3
 -- 3accumulation h0.03 l0.25: 
 -- 3accumulation h0.10 l0.45: 2.32e3
 -- 1accumulation h0.03 l0.25: 
@@ -51,23 +52,24 @@ TRAJECTORY_BUILDER_3D.ceres_scan_matcher.rotation_weight = 6.6e3 --3acc: 3.5e3, 
 
 MAP_BUILDER.use_trajectory_builder_3d = true
 MAP_BUILDER.num_background_threads = 20
-MAP_BUILDER.sparse_pose_graph.optimization_problem.huber_scale = 5e2
-MAP_BUILDER.sparse_pose_graph.optimize_every_n_scans = 40 --increases frequency of loop closure attempts
-MAP_BUILDER.sparse_pose_graph.constraint_builder.sampling_ratio = 0.03
-MAP_BUILDER.sparse_pose_graph.optimization_problem.ceres_solver_options.max_num_iterations = 200
+
+SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 5e2
+SPARSE_POSE_GRAPH.optimize_every_n_scans = NUM_SCANS_PER_SUBMAP --increases frequency of loop closure attempts
+SPARSE_POSE_GRAPH.constraint_builder.sampling_ratio = 0.03
+SPARSE_POSE_GRAPH.optimization_problem.ceres_solver_options.max_num_iterations = 200
 -- Reuse the coarser 3D voxel filter to speed up the computation of loop closure
 -- constraints.
-MAP_BUILDER.sparse_pose_graph.constraint_builder.adaptive_voxel_filter = TRAJECTORY_BUILDER_3D.high_resolution_adaptive_voxel_filter
-MAP_BUILDER.sparse_pose_graph.constraint_builder.min_score = 0.62
+SPARSE_POSE_GRAPH.constraint_builder.adaptive_voxel_filter = TRAJECTORY_BUILDER_3D.high_resolution_adaptive_voxel_filter
+SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.40
 
---MAP_BUILDER.sparse_pose_graph.max_num_final_iterations = 2000 --def 200
+--SPARSE_POSE_GRAPH.max_num_final_iterations = 2000 --def 200
 
 -- Crazy search window to force loop closure to work. All other changes are probably not needed.
---MAP_BUILDER.sparse_pose_graph.constraint_builder.max_constraint_distance = 250.
---MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.linear_xy_search_window = 250.
---MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.linear_z_search_window = 30.
---MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.angular_search_window = math.rad(60.)
---MAP_BUILDER.sparse_pose_graph.constraint_builder.fast_correlative_scan_matcher_3d.min_rotational_score = 0.83 --def0.77
---MAP_BUILDER.sparse_pose_graph.constraint_builder.ceres_scan_matcher_3d.ceres_solver_options.max_num_iterations = 50
+SPARSE_POSE_GRAPH.constraint_builder.max_constraint_distance = 250.
+SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher_3d.linear_xy_search_window = 50.
+SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher_3d.linear_z_search_window = 10.
+SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher_3d.angular_search_window = math.rad(20.)
+--SPARSE_POSE_GRAPH.constraint_builder.fast_correlative_scan_matcher_3d.min_rotational_score = 0.83 --def0.77
+SPARSE_POSE_GRAPH.constraint_builder.ceres_scan_matcher_3d.ceres_solver_options.max_num_iterations = 50
 
 return options

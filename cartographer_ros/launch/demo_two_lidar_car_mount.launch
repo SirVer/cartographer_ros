@@ -40,6 +40,6 @@
       args="-d $(find cartographer_ros)/configuration_files/3d_vlp16.rviz" />
 
   <node name="playbag" pkg="rosbag" type="play"
-      args="--clock -r 1 $(arg bag_filename)" /> <!-- play with 5x speed -->
+      args="--clock -r 2 $(arg bag_filename)" /> <!-- play with 5x speed -->
 
 </launch>
