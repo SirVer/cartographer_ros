@@ -19,10 +19,7 @@ options = {
 }
 
 TRAJECTORY_BUILDER_3D.scans_per_accumulation = 80
---TRAJECTORY_BUILDER_3D.motion_filter.max_angle_radians = 0.1
 TRAJECTORY_BUILDER_3D.ceres_scan_matcher.ceres_solver_options.max_num_iterations = 50
---TRAJECTORY_BUILDER_3D.ceres_scan_matcher.rotation_weight = 1e3
---TRAJECTORY_BUILDER_3D.ceres_scan_matcher.translation_weight = 1
 TRAJECTORY_BUILDER_3D.submaps.num_range_data = 80
 
 MAP_BUILDER.use_trajectory_builder_3d = true
