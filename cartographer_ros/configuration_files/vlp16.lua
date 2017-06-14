@@ -14,13 +14,19 @@ options = {
   use_multi_echo_laser_scan = false,
   num_point_clouds = 1,
   lookup_transform_timeout_sec = 0.2,
-  submap_publish_period_sec = 0.3,
+  submap_publish_period_sec = 0.01,
   pose_publish_period_sec = 5e-3,
+  trajectory_publish_period_sec = 5e-3,
 }
 
 TRAJECTORY_BUILDER_3D.scans_per_accumulation = 80
 TRAJECTORY_BUILDER_3D.ceres_scan_matcher.ceres_solver_options.max_num_iterations = 50
 TRAJECTORY_BUILDER_3D.submaps.num_range_data = 80
+TRAJECTORY_BUILDER_3D.kalman_local_trajectory_builder.use_online_correlative_scan_matching = true
+TRAJECTORY_BUILDER_3D.kalman_local_trajectory_builder.real_time_correlative_scan_matcher.linear_search_window = 0.2
+TRAJECTORY_BUILDER_3D.kalman_local_trajectory_builder.real_time_correlative_scan_matcher.angular_search_window = math.rad(1.)
+-- TRAJECTORY_BUILDER_3D.ceres_scan_matcher.translation_weight = 30
+-- TRAJECTORY_BUILDER_3D.ceres_scan_matcher.rotation_weight = 2000
 
 MAP_BUILDER.use_trajectory_builder_3d = true
 MAP_BUILDER.num_background_threads = 7
