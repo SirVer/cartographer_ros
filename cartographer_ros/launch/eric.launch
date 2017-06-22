@@ -1,0 +1,39 @@
+<launch>
+  <param name="/use_sim_time" value="true" />
+
+  <!-- Transforms and 3D Model -->
+  <include file="$(find dbw_mkz_description)/launch/mkz.launch" />
+
+  <!-- MKZ Driver -->
+  <include file="$(find dbw_mkz_can)/launch/offline.launch" />
+
+  <!-- velodyne static transform -->
+  <node pkg="tf" type="static_transform_publisher" name="tf_velodyne" respawn="true" args="0.94 0.0 1.5 0.01 0.02 0.0 base_footprint velodyne 100" />
+  <!--<node pkg="tf" type="static_transform_publisher" name="tf_velodyne" respawn="true" args="0.94 0.0 1.17 0.01 0.02 0.0 base_link velodyne 100" />-->
+
+  <!-- IMU Fixer -->
+  <node name="imu_fixer" pkg="imu_fixer" type="ImuFixer.py">
+    <remap from="input" to="vehicle/imu/data_raw" />
+    <remap from="output" to="vehicle/imu/data_fixed" />
+  </node>
+
+  <!-- Cartographer -->
+  <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find cartographer_ros)/configuration_files
+          -configuration_basename eric_config.lua"
+      output="screen">
+    <remap from="points2" to="velodyne_points" />
+    <remap from="imu" to="vehicle/imu/data_fixed" />
+  </node>
+
+  <!-- RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/demo_3d.rviz" />
+
+  <!-- Bag Playback -->
+  <node name="playbag" pkg="rosbag" type="play" output="screen"
+      args="--clock /home/eric/Downloads/pedestrians.bag" />
+
+
+</launch>
