@@ -33,7 +33,7 @@ options = {
   trajectory_publish_period_sec = 30e-3,
 }
 
-TRAJECTORY_BUILDER_3D.scans_per_accumulation = 160
+TRAJECTORY_BUILDER_3D.scans_per_accumulation = 1
 
 MAP_BUILDER.use_trajectory_builder_3d = true
 MAP_BUILDER.num_background_threads = 7
