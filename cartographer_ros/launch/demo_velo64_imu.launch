@@ -26,10 +26,11 @@
       args="-d $(find cartographer_ros)/configuration_files/demo_3d.rviz" />
   
   <node name="playbag" pkg="rosbag" type="play"
-      args="--clock /home/sai/Downloads/2017-07-17-11-26-27.bag " output="screen" />
+      args="--clock $(arg bag_filename)" output="screen">
     <remap from="/mti/sensor/imu" to="/imu" />
     <remap from="/velodyne_points" to="/points2" />
     <!--remap from="/tf" to="tf_in" /-->
+  </node>
 
   <!--node name="playTF" pkg="tf" type="static_transform_publisher"
       args=" 0 0 0 0 0 0 base_link velone 100 " /-->
