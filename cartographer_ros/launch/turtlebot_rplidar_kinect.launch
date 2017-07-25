@@ -1,0 +1,5 @@
+<launch>
+    <include file="$(find cartographer_turtlebot)/launch/turtlebot2.launch">
+		<arg name="configuration_basename" value="turtlebot_rplidar_kinect.lua" />
+    </include>
+</launch>
