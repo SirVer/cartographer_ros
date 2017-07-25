@@ -1,5 +1,10 @@
 <launch>
-    <include file="$(find cartographer_turtlebot)/launch/turtlebot2.launch">
+    <include file="$(find cartographer_ros)/launch/turtlebot2.launch">
 		<arg name="configuration_basename" value="turtlebot_rplidar_kinect.lua" />
     </include>
+
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz" />
+  <node name="playbag" pkg="rosbag" type="play"
+    args="--clock --bags $(arg bag_filename) --topics scan_1 scan_2 tf tf_static" />
 </launch>
