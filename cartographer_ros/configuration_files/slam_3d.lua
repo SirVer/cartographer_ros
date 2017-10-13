@@ -19,18 +19,22 @@ options = {
   map_builder = MAP_BUILDER,
   trajectory_builder = TRAJECTORY_BUILDER,
   map_frame = "map",
-  tracking_frame = "imu",
+  tracking_frame = "base_link",
   published_frame = "base_link",
   odom_frame = "odom",
   provide_odom_frame = false,
   use_odometry = false,
-  use_laser_scan = false,
-  use_multi_echo_laser_scan = false,
+  num_laser_scans = 0,
+  num_multi_echo_laser_scans = 0,
+  num_subdivisions_per_laser_scan = 1,
   num_point_clouds = 1,
   lookup_transform_timeout_sec = 0.2,
   submap_publish_period_sec = 0.3,
   pose_publish_period_sec = 5e-3,
   trajectory_publish_period_sec = 30e-3,
+  rangefinder_sampling_ratio = 1.,
+  odometry_sampling_ratio = 1.,
+  imu_sampling_ratio = 1.,
 }
 TRAJECTORY_BUILDER_3D.scans_per_accumulation = 1
 TRAJECTORY_BUILDER_3D.submaps.num_range_data = 20
@@ -41,11 +45,11 @@ SPARSE_POSE_GRAPH.optimization_problem.huber_scale = 5e2
 SPARSE_POSE_GRAPH.optimize_every_n_scans = 20
 SPARSE_POSE_GRAPH.constraint_builder.sampling_ratio = 0.03
 SPARSE_POSE_GRAPH.optimization_problem.ceres_solver_options.max_num_iterations = 10
-SPARSE_POSE_GRAPH.matcher_rotation_weight = 5e5
-SPARSE_POSE_GRAPH.matcher_translation_weight = 2e2
+-- SPARSE_POSE_GRAPH.matcher_rotation_weight = 5e5
+-- SPARSE_POSE_GRAPH.matcher_translation_weight = 2e2
 -- Reuse the coarser 3D voxel filter to speed up the computation of loop closure
 -- constraints.
-SPARSE_POSE_GRAPH.constraint_builder.adaptive_voxel_filter = TRAJECTORY_BUILDER_3D.high_resolution_adaptive_voxel_filter
+-- SPARSE_POSE_GRAPH.constraint_builder.adaptive_voxel_filter = TRAJECTORY_BUILDER_3D.high_resolution_adaptive_voxel_filter
 SPARSE_POSE_GRAPH.constraint_builder.min_score = 0.62
 
 return options

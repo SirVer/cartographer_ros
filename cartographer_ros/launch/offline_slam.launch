@@ -8,7 +8,7 @@
       type="cartographer_offline_node" args="
           -configuration_directory $(find cartographer_ros)/configuration_files
           -configuration_basename slam_3d.lua
-          -urdf_filename $(find read_imu)/urdf/backpack_3d.urdf
+          -urdf_filename $(find cartographer_ros)/urdf/backpack_3d.urdf
           -bag_filenames $(arg bag_filenames)"
       output="screen">
     <remap from="points2" to="velodyne_points" />
