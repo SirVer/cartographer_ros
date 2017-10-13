@@ -22,7 +22,7 @@
     <color rgba="0.2 0.2 0.2 1" />
   </material>
 
-  <link name="imu_link">
+  <link name="imu">
     <visual>
       <origin xyz="0.0 0.0 0.0" />
       <geometry>
@@ -32,7 +32,7 @@
     </visual>
   </link>
 
-  <link name="horizontal_vlp16_link">
+  <link name="velodyne">
     <visual>
       <origin xyz="0.0 0.0 0.0" />
       <geometry>
@@ -56,14 +56,14 @@
 
   <joint name="imu_link_joint" type="fixed">
     <parent link="base_link" />
-    <child link="imu_link" />
+    <child link="imu" />
     <origin xyz="0 0 0" rpy="3.1416 0 0" />
   </joint>
 
-  <joint name="horizontal_vlp16_link_joint" type="fixed">
+  <joint name="velodyne_link_joint" type="fixed">
     <parent link="base_link" />
-    <child link="horizontal_vlp16_link" />
-    <origin xyz="0.01 0. 0.19" rpy="0. -0.1745 3.1416" />
+    <child link="velodyne" />
+    <origin xyz="-0.0088 -0.0205 0.12562" rpy="0. 0. 0." />
   </joint>
 
   <joint name="vertical_vlp16_link_joint" type="fixed">
