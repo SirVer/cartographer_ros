@@ -1,0 +1,15 @@
+<robot name="simulated">
+  <link name="base_link" />
+  <link name="T7_laserscan_plugin"/>
+  <link name="imu_link"/>
+  <joint name="laserscan_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="T7_laserscan_plugin" />
+    <origin xyz="1.185 0.03 0.17" rpy="3.14 0 0" />
+  </joint>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0.45 0.0 0.0" rpy="0 0 0" />
+  </joint>
+</robot>

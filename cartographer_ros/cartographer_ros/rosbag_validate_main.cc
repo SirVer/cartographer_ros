@@ -21,6 +21,9 @@
 
 #include "cartographer/common/histogram.h"
 #include "cartographer/common/make_unique.h"
+#include "cartographer/common/time.h"
+#include "cartographer_ros/msg_conversion.h"
+#include "cartographer_ros/time_conversion.h"
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include "nav_msgs/Odometry.h"
@@ -104,6 +107,9 @@ void Run(const string& bag_filename, const bool dump_timing) {
       frame_id = msg->header.frame_id;
     } else if (message.isType<nav_msgs::Odometry>()) {
       auto msg = message.instantiate<nav_msgs::Odometry>();
+      auto pose = ToRigid3d(msg->pose.pose);
+      auto our_time = ::cartographer::common::ToUniversal(FromRos(msg->header.stamp));
+      LOG(INFO) << "#hrapp pose: '" << our_time << ", " << pose << "'";
       time = msg->header.stamp;
       frame_id = msg->header.frame_id;
     } else {

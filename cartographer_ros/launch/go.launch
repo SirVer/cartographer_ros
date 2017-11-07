@@ -23,9 +23,6 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher"
     type="robot_state_publisher" />
 
-    <!-- Poor mans URDF -->
-    <node pkg="tf" type="static_transform_publisher" name="laserscan_transform_publisher" args="1.185 0.03 0.17 0.999999682932 0.0 0.0 0.000796326710733 base_link T7_laserscan_plugin 1" />
-
   <node name="rviz" pkg="rviz" type="rviz" required="true"
       args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz" />
 
@@ -40,5 +37,7 @@
   <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
       type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
 
+  <node name="playbag" pkg="rosbag" type="play"
+    args="-r 1. --clock $(arg bag_filename) --topics /scan /truth_odom" />
 </launch>
 
