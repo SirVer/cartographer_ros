@@ -69,6 +69,33 @@ constexpr char kTfTopic[] = "tf";
 constexpr double kClockPublishFrequencySec = 1. / 30.;
 constexpr int kSingleThreaded = 1;
 
+class  MessageHandler {
+ public:
+  explicit MessageHandler(
+      int num_subdivisions_per_laser_scan, const string& tracking_frame,
+      double lookup_transform_timeout_sec, tf2_ros::Buffer* tf_buffer,
+      ::cartographer::mapping::TrajectoryBuilder* trajectory_builder);
+
+  MessageHandler(const MessageHandler&) = delete;
+  MessageHandler& operator=(const MessageHandler&) = delete;
+
+  void HandleOdometryMessage(const string& sensor_id,
+                             const nav_msgs::Odometry::ConstPtr& msg);
+  void HandleImuMessage(const string& sensor_id,
+                        const sensor_msgs::Imu::ConstPtr& msg);
+  void HandleLaserScanMessage(const string& sensor_id,
+                              const sensor_msgs::LaserScan::ConstPtr& msg);
+  void HandleMultiEchoLaserScanMessage(
+      const string& sensor_id,
+      const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg);
+  void HandlePointCloud2Message(const string& sensor_id,
+                                const sensor_msgs::PointCloud2::ConstPtr& msg);
+  void HandleTfMessage(const string& sensor_id,
+                       const nav_msgs::Odometry::ConstPtr& msg);
+
+ private:
+};
+
 // A poor mans typed union that signifies events from the IO thread.
 struct Event {
   enum class Kind {
