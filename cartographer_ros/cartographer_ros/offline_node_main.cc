@@ -69,63 +69,16 @@ constexpr char kTfTopic[] = "tf";
 constexpr double kClockPublishFrequencySec = 1. / 30.;
 constexpr int kSingleThreaded = 1;
 
-class  MessageHandler {
- public:
-  explicit MessageHandler(
-      int num_subdivisions_per_laser_scan, const string& tracking_frame,
-      double lookup_transform_timeout_sec, tf2_ros::Buffer* tf_buffer,
-      ::cartographer::mapping::TrajectoryBuilder* trajectory_builder);
-
-  MessageHandler(const MessageHandler&) = delete;
-  MessageHandler& operator=(const MessageHandler&) = delete;
-
-  void HandleOdometryMessage(const string& sensor_id,
-                             const nav_msgs::Odometry::ConstPtr& msg);
-  void HandleImuMessage(const string& sensor_id,
-                        const sensor_msgs::Imu::ConstPtr& msg);
-  void HandleLaserScanMessage(const string& sensor_id,
-                              const sensor_msgs::LaserScan::ConstPtr& msg);
-  void HandleMultiEchoLaserScanMessage(
-      const string& sensor_id,
-      const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg);
-  void HandlePointCloud2Message(const string& sensor_id,
-                                const sensor_msgs::PointCloud2::ConstPtr& msg);
-  void HandleTfMessage(const string& sensor_id,
-                       const nav_msgs::Odometry::ConstPtr& msg);
-
- private:
-};
-
 // A poor mans typed union that signifies events from the IO thread.
 struct Event {
   enum class Kind {
     kNewBag,
     kBagEnd,
-    kRosMessage,
+    kSensorMessage,
+    kTfMessage,
   };
 
   // A poors mans union that contains instantiated ROS messages.
-  struct RosMessage {
-    enum class Kind {
-      kTf,
-      kImu,
-      kOdometry,
-      kLaserScan,
-      kMultiEchoLaserScan,
-      kPointCloud2,
-    };
-
-    RosMessage::Kind kind;
-    string topic;
-    ros::Time serialization_time;
-    sensor_msgs::Imu::ConstPtr imu;
-    sensor_msgs::LaserScan::ConstPtr laser_scan;
-    sensor_msgs::MultiEchoLaserScan::ConstPtr multi_echo_laser_scan;
-    sensor_msgs::PointCloud2::ConstPtr point_cloud2;
-    nav_msgs::Odometry::ConstPtr odometry;
-    tf2_msgs::TFMessage::ConstPtr tf;
-  };
-
   static Event NewBag(::ros::Time begin_time, double duration_in_seconds) {
     Event event;
     event.kind = Kind::kNewBag;
@@ -140,99 +93,48 @@ struct Event {
     return event;
   }
 
-  static Event TfMessage(const string& topic,
-                         const ros::Time serialization_time,
-                         tf2_msgs::TFMessage::ConstPtr ros_message) {
-    CHECK(ros_message != nullptr);
+  static Event TfMessage(const std::string& topic,
+                         tf2_msgs::TFMessage::ConstPtr msg) {
+    CHECK(msg != nullptr);
     Event event;
-    event.kind = Kind::kRosMessage;
-    event.message.kind = RosMessage::Kind::kTf;
-    event.message.topic = topic;
-    event.message.serialization_time = serialization_time;
-    event.message.tf = std::move(ros_message);
+    event.kind = Kind::kTfMessage;
+    event.tf_message.topic = topic;
+    event.tf_message.tf = std::move(msg);
     return event;
   }
 
-  static Event LaserScanMessage(const string& topic,
-                                const ros::Time serialization_time,
-                                sensor_msgs::LaserScan::ConstPtr ros_message) {
-    CHECK(ros_message != nullptr);
+  static Event SensorMessage(const ros::Time serialization_time,
+                             std::function<void()> handle) {
     Event event;
-    event.kind = Kind::kRosMessage;
-    event.message.kind = RosMessage::Kind::kLaserScan;
-    event.message.topic = topic;
-    event.message.serialization_time = serialization_time;
-    event.message.laser_scan = std::move(ros_message);
-    return event;
-  }
-
-  static Event MultiEchoLaserScanMessage(
-      const string& topic, const ros::Time serialization_time,
-      sensor_msgs::MultiEchoLaserScan::ConstPtr ros_message) {
-    CHECK(ros_message != nullptr);
-    Event event;
-    event.kind = Kind::kRosMessage;
-    event.message.kind = RosMessage::Kind::kMultiEchoLaserScan;
-    event.message.topic = topic;
-    event.message.serialization_time = serialization_time;
-    event.message.multi_echo_laser_scan = std::move(ros_message);
-    return event;
-  }
-
-  static Event PointCloud2Message(
-      const string& topic, const ros::Time serialization_time,
-      sensor_msgs::PointCloud2::ConstPtr ros_message) {
-    CHECK(ros_message != nullptr);
-    Event event;
-    event.kind = Kind::kRosMessage;
-    event.message.kind = RosMessage::Kind::kPointCloud2;
-    event.message.topic = topic;
-    event.message.serialization_time = serialization_time;
-    event.message.point_cloud2 = std::move(ros_message);
-    return event;
-  }
-
-  static Event ImuMessage(const string& topic,
-                          const ros::Time serialization_time,
-                          sensor_msgs::Imu::ConstPtr ros_message) {
-    CHECK(ros_message != nullptr);
-    Event event;
-    event.kind = Kind::kRosMessage;
-    event.message.kind = RosMessage::Kind::kImu;
-    event.message.topic = topic;
-    event.message.serialization_time = serialization_time;
-    event.message.imu = std::move(ros_message);
-    return event;
-  }
-
-  static Event OdometryMessage(const string& topic,
-                               const ros::Time serialization_time,
-                               nav_msgs::Odometry::ConstPtr ros_message) {
-    CHECK(ros_message != nullptr);
-    Event event;
-    event.kind = Kind::kRosMessage;
-    event.message.kind = RosMessage::Kind::kOdometry;
-    event.message.topic = topic;
-    event.message.serialization_time = serialization_time;
-    event.message.odometry = std::move(ros_message);
+    event.kind = Kind::kSensorMessage;
+    event.sensor_message.serialization_time = serialization_time;
+    event.sensor_message.handle = handle;
     return event;
   }
 
   Kind kind;
-
   struct {
     ::ros::Time begin_time;
     double duration_in_seconds;
   } new_bag;
-  RosMessage message;
+
+  struct {
+    std::string topic;
+    tf2_msgs::TFMessage::ConstPtr tf;
+  } tf_message;
+
+  struct SensorMsg {
+    ros::Time serialization_time;
+    std::function<void()> handle;
+  } sensor_message;
 };
 
-void RosbagIoThread(const std::vector<string>& bag_filenames,
-                    const std::unordered_set<string>& expected_sensor_ids,
-                    ::ros::NodeHandle* node_handle,
+void RosbagIoThread(const std::vector<std::string>& bag_filenames,
+                    const std::unordered_set<std::string>& expected_sensor_ids,
+                    Node* node,
                     ::cartographer::common::BlockingQueue<Event>* queue) {
   for (size_t bag_index = 0; bag_index < bag_filenames.size(); ++bag_index) {
-    const string& bag_filename = bag_filenames[bag_index];
+    const std::string& bag_filename = bag_filenames[bag_index];
     if (!::ros::ok()) {
       break;
     }
@@ -248,12 +150,12 @@ void RosbagIoThread(const std::vector<string>& bag_filenames,
       if (!::ros::ok()) {
         break;
       }
-      const string topic =
-          node_handle->resolveName(msg.getTopic(), false /* resolve */);
+      const std::string topic =
+          node->node_handle()->resolveName(msg.getTopic(), false /* resolve */);
 
-      if (msg.isType<tf2_msgs::TFMessage>()) {
-        queue->Push(Event::TfMessage(topic, msg.getTime(),
-                                     msg.instantiate<tf2_msgs::TFMessage>()));
+      if (FLAGS_use_bag_transforms && msg.isType<tf2_msgs::TFMessage>()) {
+        queue->Push(
+            Event::TfMessage(topic, msg.instantiate<tf2_msgs::TFMessage>()));
         continue;
       }
 
@@ -262,21 +164,30 @@ void RosbagIoThread(const std::vector<string>& bag_filenames,
       }
 
       if (msg.isType<sensor_msgs::LaserScan>()) {
-        queue->Push(Event::LaserScanMessage(
-            topic, msg.getTime(), msg.instantiate<sensor_msgs::LaserScan>()));
+        auto content = msg.instantiate<sensor_msgs::LaserScan>();
+        queue->Push(Event::SensorMessage(msg.getTime(), [=] {
+          node->HandleLaserScanMessage(bag_index, topic, content);
+        }));
       } else if (msg.isType<sensor_msgs::MultiEchoLaserScan>()) {
-        queue->Push(Event::MultiEchoLaserScanMessage(
-            topic, msg.getTime(),
-            msg.instantiate<sensor_msgs::MultiEchoLaserScan>()));
+        auto content = msg.instantiate<sensor_msgs::MultiEchoLaserScan>();
+        queue->Push(Event::SensorMessage(msg.getTime(), [=] {
+          node->HandleMultiEchoLaserScanMessage(bag_index, topic, content);
+        }));
       } else if (msg.isType<sensor_msgs::PointCloud2>()) {
-        queue->Push(Event::PointCloud2Message(
-            topic, msg.getTime(), msg.instantiate<sensor_msgs::PointCloud2>()));
+        auto content = msg.instantiate<sensor_msgs::PointCloud2>();
+        queue->Push(Event::SensorMessage(msg.getTime(), [=] {
+          node->HandlePointCloud2Message(bag_index, topic, content);
+        }));
       } else if (msg.isType<sensor_msgs::Imu>()) {
-        queue->Push(Event::ImuMessage(topic, msg.getTime(),
-                                      msg.instantiate<sensor_msgs::Imu>()));
+        auto content = msg.instantiate<sensor_msgs::Imu>();
+        queue->Push(Event::SensorMessage(msg.getTime(), [=] {
+          node->HandleImuMessage(bag_index, topic, content);
+        }));
       } else if (msg.isType<nav_msgs::Odometry>()) {
-        queue->Push(Event::OdometryMessage(
-            topic, msg.getTime(), msg.instantiate<nav_msgs::Odometry>()));
+        auto content = msg.instantiate<nav_msgs::Odometry>();
+        queue->Push(Event::SensorMessage(msg.getTime(), [=] {
+          node->HandleOdometryMessage(bag_index, topic, content);
+        }));
       }
     }
     queue->Push(Event::BagEnd());
@@ -284,7 +195,7 @@ void RosbagIoThread(const std::vector<string>& bag_filenames,
   }
 }
 
-void Run(const std::vector<string>& bag_filenames) {
+void Run(const std::vector<std::string>& bag_filenames) {
   const std::chrono::time_point<std::chrono::steady_clock> start_time =
       std::chrono::steady_clock::now();
   NodeOptions node_options;
@@ -322,8 +233,7 @@ void Run(const std::vector<string>& bag_filenames) {
 
   ::cartographer::common::BlockingQueue<Event> queue(100);
   std::thread rosbag_io_thread(RosbagIoThread, std::ref(bag_filenames),
-                               std::ref(expected_sensor_ids),
-                               node.node_handle(), &queue);
+                               std::ref(expected_sensor_ids), &node, &queue);
 
   ::ros::Publisher tf_publisher =
       node.node_handle()->advertise<tf2_msgs::TFMessage>(
@@ -356,7 +266,7 @@ void Run(const std::vector<string>& bag_filenames) {
   // We need to keep 'tf_buffer' small because it becomes very inefficient
   // otherwise. We make sure that tf_messages are published before any data
   // messages, so that tf lookups always work.
-  std::deque<Event::RosMessage> delayed_messages;
+  std::deque<Event::SensorMsg> delayed_messages;
 
   // We publish tf messages one second earlier than other messages. Under
   // the assumption of higher frequency tf this should ensure that tf can
@@ -364,13 +274,16 @@ void Run(const std::vector<string>& bag_filenames) {
   const ::ros::Duration kDelay(1.);
 
   for (size_t bag_index = 0; bag_index < bag_filenames.size();) {
-    const Event message = queue.Pop();
-    switch (message.kind) {
+    const Event event = queue.Pop();
+    switch (event.kind) {
       case Event::Kind::kNewBag:
-        begin_time = message.new_bag.begin_time;
-        duration_in_seconds = message.new_bag.duration_in_seconds;
+        begin_time = event.new_bag.begin_time;
+        duration_in_seconds = event.new_bag.duration_in_seconds;
         trajectory_id =
             node.AddOfflineTrajectory(expected_sensor_ids, trajectory_options);
+        // If this check is not true in the future anymore, RosbagIo needs to
+        // get the trajectory_ids communicated.
+        CHECK_EQ(trajectory_id, bag_index);
         break;
 
       case Event::Kind::kBagEnd:
@@ -378,59 +291,27 @@ void Run(const std::vector<string>& bag_filenames) {
         ++bag_index;
         break;
 
-      case Event::Kind::kRosMessage: {
-        if (FLAGS_use_bag_transforms &&
-            message.message.kind == Event::RosMessage::Kind::kTf) {
-          tf_publisher.publish(*message.message.tf);
-          for (const auto& transform : message.message.tf->transforms) {
-            try {
-              tf_buffer.setTransform(transform, "unused_authority",
-                                     message.message.topic == kTfStaticTopic);
-            } catch (const tf2::TransformException& ex) {
-              LOG(WARNING) << ex.what();
-            }
+      case Event::Kind::kTfMessage: {
+        tf_publisher.publish(*event.tf_message.tf);
+        for (const auto& transform : event.tf_message.tf->transforms) {
+          try {
+            tf_buffer.setTransform(transform, "unused_authority",
+                                   event.tf_message.topic == kTfStaticTopic);
+          } catch (const tf2::TransformException& ex) {
+            LOG(WARNING) << ex.what();
           }
-          // NOCOM(#hrapp): ugly.
-          break;  // Alread
         }
+        break;
+      }
 
+      case Event::Kind::kSensorMessage: {
         while (!delayed_messages.empty() &&
                delayed_messages.front().serialization_time <
-                   message.message.serialization_time - kDelay) {
-          const Event::RosMessage& delayed_msg = delayed_messages.front();
+                   event.sensor_message.serialization_time - kDelay) {
           CHECK_NE(trajectory_id, -1)
-              << "Did not see a kNewBag message before first ROS message.";
-          switch (delayed_msg.kind) {
-            case Event::RosMessage::Kind::kLaserScan:
-              node.HandleLaserScanMessage(trajectory_id, delayed_msg.topic,
-                                          delayed_msg.laser_scan);
-              break;
-
-            case Event::RosMessage::Kind::kMultiEchoLaserScan:
-              node.HandleMultiEchoLaserScanMessage(
-                  trajectory_id, delayed_msg.topic,
-                  delayed_msg.multi_echo_laser_scan);
-              break;
-
-            case Event::RosMessage::Kind::kPointCloud2:
-              node.HandlePointCloud2Message(trajectory_id, delayed_msg.topic,
-                                            delayed_msg.point_cloud2);
-              break;
-
-            case Event::RosMessage::Kind::kImu:
-              node.HandleImuMessage(trajectory_id, delayed_msg.topic,
-                                    delayed_msg.imu);
-              break;
-
-            case Event::RosMessage::Kind::kOdometry:
-              node.HandleOdometryMessage(trajectory_id, delayed_msg.topic,
-                                         delayed_msg.odometry);
-              break;
-
-            case Event::RosMessage::Kind::kTf:
-              LOG(FATAL) << "Should already been handled.";
-              break;
-          }
+              << "Did not see a kNewBag event before first sensor message.";
+          const Event::SensorMsg& delayed_msg = delayed_messages.front();
+          delayed_msg.handle();
 
           clock.clock = delayed_msg.serialization_time;
           clock_publisher.publish(clock);
@@ -441,7 +322,7 @@ void Run(const std::vector<string>& bag_filenames) {
               << duration_in_seconds << " bag time seconds...";
           delayed_messages.pop_front();
         }
-        delayed_messages.push_back(message.message);
+        delayed_messages.push_back(event.sensor_message);
         break;
       }
     }
